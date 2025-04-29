@@ -16,6 +16,8 @@ SUMMARY_TABLE_PATH = './../DR1_co2-1_10.0kmps_DP_QA0_simple.csv'  # <-- update t
 BASE_DIR = './../products/matched'  # absolute product directory path or relative to this script
 """
 
+`>> python main.py`
+
 ## QA Checks
 - **FITS File Verification**: Ensures FITS files are readable and conform to standards using Astropy's verification machinery.
 - **Header Verification**: Checks for required header keywords and FITS-legal formatting.
