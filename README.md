@@ -23,16 +23,18 @@ BASE_DIR = './../products/matched'  # absolute product directory path or relativ
 - **FITS File Verification**: Ensures FITS files are readable and conform to standards using Astropy's verification machinery.
 - **Header Verification**: Checks for required header keywords and FITS-legal formatting.
 - **WCS Validation**: Validates WCS presence, required keywords, and instantiation; reports missing or malformed WCS.
-- **Unit Parsing**: Parses and validates all header unit strings using Astropy units; flags typos or non-standard units.
+- **Unit Parsing & Compliance**: Parses and validates all header unit strings using Astropy units; flags typos, non-standard, or non-FITS-compliant units for all science and error maps.
 - **Edge Emission**: Checks for missed emission at cube velocity edges.
 - **Beam and Pixel Size**: Confirms round beams and correct pixel/beam units.
 - **S/N Map QA**: Computes fractions of pixels with S/N > 3, 5, 10; flags low S/N and outliers.
 - **Moment 0 & S/N Correspondence**: Verifies spatial correspondence between moment 0 peaks and high S/N regions.
-- **Error Map Variation**: Ensures error map variation is <10% across the moment 0 map.
+- **Error Map Variation**: Ensures error map variation is <20% (std/mean < 0.2) across all error maps; flags and reports the variance.
 - **Physical Consistency**: Checks scaling between Sigma_mol, L_CO, and moment 0 maps.
+- **All Positive Check**: Ensures all values in science maps are positive.
+- **Mask Non-Blank Check**: Ensures mask has sufficient non-blank pixels.
 
 ## Reporting Output
-Each QA function returns a dictionary with pass/fail flags, measured values, and error messages. The final report summarizes all checks, highlighting any failures or warnings for user review.
+Each QA function returns a dictionary with pass/fail/skip flags, measured values, and error messages. The final report summarizes all checks, highlighting any failures or warnings for user review.
 
 ### Install dependencies from requirements.txt:
 
