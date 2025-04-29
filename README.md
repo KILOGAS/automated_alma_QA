@@ -10,11 +10,12 @@ This repository provides automated quality assurance (QA) tools for KILOGAS ALMA
 
 ## Example Usage
 In main.py
-"""
+
+```
 # CONFIGURATION (edit these paths as needed)
 SUMMARY_TABLE_PATH = './../DR1_co2-1_10.0kmps_DP_QA0_simple.csv'  # <-- update this to table with KGAS IDs column (1-N)
 BASE_DIR = './../products/matched'  # absolute product directory path or relative to this script
-"""
+```
 
 `>> python main.py`
 
