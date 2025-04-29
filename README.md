@@ -34,6 +34,10 @@ BASE_DIR = './../products/matched'  # absolute product directory path or relativ
 ## Reporting Output
 Each QA function returns a dictionary with pass/fail flags, measured values, and error messages. The final report summarizes all checks, highlighting any failures or warnings for user review.
 
+### Install dependencies from requirements.txt:
+
+`>> pip install -r requirements.txt`
+
 ---
 
 For more details, see the code and docstrings in each function. 

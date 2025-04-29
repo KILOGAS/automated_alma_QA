@@ -5,6 +5,7 @@ import os
 from astropy.wcs import validate as wcs_validate
 from astropy.wcs import WCS
 from astropy.units import Unit, UnitsError
+from astropy import units as u
 
 def check_edge_emission(cube_path, edge_channels=3, threshold_sigma=3):
     """
@@ -331,8 +332,18 @@ def get_map_min_max_units(map_path):
         units = header.get('BUNIT', None)
         return {'min': float(min_val), 'max': float(max_val), 'units': units}
 
+def assert_fits_unit(unit_str):
+    """
+    Raise a ValueError if unit_str is not FITS-compliant.
+    """
+    try:
+        u.Unit(unit_str, format='fits', parse_strict='raise')
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
 def assert_header_units(fits_path, expected_unit, allow_log=False):
-    """Assert the header unit matches expected. Fail if log units or not as expected. Use astropy.units.Unit for parsing."""
+    """Assert the header unit matches expected. Fail if log units or not as expected. Use astropy.units.Unit for parsing and FITS compliance."""
     result = {}
     try:
         with fits.open(fits_path) as hdul:
@@ -341,7 +352,11 @@ def assert_header_units(fits_path, expected_unit, allow_log=False):
             unit = header.get('BUNIT', '').strip()
             fail = False
             reason = ''
-            if not allow_log and 'log' in unit.lower():
+            fits_compliant, fits_compliance_error = assert_fits_unit(unit)
+            if not fits_compliant:
+                fail = True
+                reason = f'Not FITS-compliant: {fits_compliance_error}'
+            elif not allow_log and 'log' in unit.lower():
                 fail = True
                 reason = f'Unit is log: {unit}'
             else:
@@ -353,7 +368,7 @@ def assert_header_units(fits_path, expected_unit, allow_log=False):
                 except UnitsError as ue:
                     fail = True
                     reason = f'Unit parse error: {ue}'
-            result.update({'unit': unit, 'expected_unit': expected_unit, 'fail_unit': fail, 'fail_reason': reason})
+            result.update({'unit': unit, 'expected_unit': expected_unit, 'fail_unit': fail, 'fail_reason': reason, 'fits_compliant': fits_compliant, 'fits_compliance_error': fits_compliance_error})
     except Exception as e:
         result['error'] = f'Header unit check failed: {e}'
     return result
@@ -391,4 +406,20 @@ def run_wcs_validation(fits_path):
                 return {'wcs_validation': str(results), 'wcs_validation_fail': True, 'missing_wcs_keywords': missing}
         return {'wcs_validation': str(results), 'wcs_validation_fail': False}
     except Exception as e:
-        return {'wcs_validation': str(e), 'wcs_validation_fail': True} 
+        return {'wcs_validation': str(e), 'wcs_validation_fail': True}
+
+def check_error_map_variation(err_map_path, threshold=0.2):
+    """
+    Check if the error map varies by more than the given threshold (default 20%).
+    Returns: dict with 'err_var_frac', 'err_var_fail', 'err_mean', 'err_std'.
+    """
+    try:
+        with fits.open(err_map_path) as hdul:
+            data = hdul[0].data
+            mean = float(np.nanmean(data))
+            std = float(np.nanstd(data))
+            var_frac = std / mean if mean != 0 else np.nan
+            fail = var_frac > threshold
+            return {'err_var_frac': var_frac, 'err_var_fail': fail, 'err_mean': mean, 'err_std': std}
+    except Exception as e:
+        return {'err_var_frac': np.nan, 'err_var_fail': True, 'err_mean': np.nan, 'err_std': np.nan, 'err_var_error': str(e)} 

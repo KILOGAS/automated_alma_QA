@@ -20,7 +20,9 @@ from qa_checks import (
     run_wcs_validation,
     assert_header_units,
     check_all_positive,
-    check_mask_nonblank
+    check_mask_nonblank,
+    extract_velocity_axis,
+    check_error_map_variation
 )
 from reporting import print_qa_summary, print_detailed_report, print_flagged_report
 
@@ -47,6 +49,7 @@ def main():
         ico_err_path = err_files['ico_err']
         lco_err_path = err_files['lco_err']
         mmol_err_path = err_files['mmol_err']
+        sigma_mol_err_path = err_files['sigma_mol_err']
         # Check for all required files (not error maps)
         required_files = [cube_path, mask_path, ico_path, lco_path, sigma_mol_path]
         missing = [f for f in required_files if not os.path.exists(f)]
@@ -95,6 +98,47 @@ def main():
         wcs_lco = run_wcs_validation(lco_path)
         wcs_sigma_mol = run_wcs_validation(sigma_mol_path)
         wcs_mmol = run_wcs_validation(mmol_path)
+        # Velocity axis info
+        header = None
+        try:
+            with fits.open(cube_path) as hdul:
+                header = hdul[0].header
+        except Exception:
+            header = None
+        if header is not None:
+            cdelt3, crval3, crpix3, cunit3 = extract_velocity_axis(header)
+        else:
+            cdelt3 = crval3 = crpix3 = cunit3 = None
+
+        # Header unit checks
+        cube_unit_check = assert_header_units(cube_path, expected_unit='K')
+        mask_unit_check = assert_header_units(mask_path, expected_unit='')
+        ico_unit_check = assert_header_units(ico_path, expected_unit='K km/s')
+        lco_unit_check = assert_header_units(lco_path, expected_unit='K km/s pc2')
+        sigma_mol_unit_check = assert_header_units(sigma_mol_path, expected_unit='Msun / pc2', allow_log=False)
+        mmol_unit_check = assert_header_units(mmol_path, expected_unit='Msun', allow_log=False)
+
+        # All positive checks
+        ico_positive_check = check_all_positive(ico_path)
+        lco_positive_check = check_all_positive(lco_path)
+        sigma_mol_positive_check = check_all_positive(sigma_mol_path)
+        mmol_positive_check = check_all_positive(mmol_path)
+
+        # Mask non-blank check
+        mask_nonblank_check = check_mask_nonblank(mask_path)
+
+        # Error map unit checks
+        ico_err_unit_check = assert_header_units(ico_err_path, expected_unit='K km / s') if ico_err_path and os.path.exists(ico_err_path) else {'unit': None, 'expected_unit': 'K km / s', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
+        lco_err_unit_check = assert_header_units(lco_err_path, expected_unit='K km / s pc2') if lco_err_path and os.path.exists(lco_err_path) else {'unit': None, 'expected_unit': 'K km / s pc2', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
+        sigma_mol_err_unit_check = assert_header_units(sigma_mol_err_path, expected_unit='Msun / pc2', allow_log=True) if sigma_mol_err_path and os.path.exists(sigma_mol_err_path) else {'unit': None, 'expected_unit': 'Msun / pc2', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
+        mmol_err_unit_check = assert_header_units(mmol_err_path, expected_unit='Msun', allow_log=True) if mmol_err_path and os.path.exists(mmol_err_path) else {'unit': None, 'expected_unit': 'Msun', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
+
+        # Error map error variation checks
+        ico_err_var = check_error_map_variation(ico_err_path) if ico_err_path and os.path.exists(ico_err_path) else {'err_var_frac': None, 'err_var_fail': None, 'err_mean': None, 'err_std': None, 'err_var_error': 'File missing'}
+        lco_err_var = check_error_map_variation(lco_err_path) if lco_err_path and os.path.exists(lco_err_path) else {'err_var_frac': None, 'err_var_fail': None, 'err_mean': None, 'err_std': None, 'err_var_error': 'File missing'}
+        sigma_mol_err_var = check_error_map_variation(sigma_mol_err_path) if sigma_mol_err_path and os.path.exists(sigma_mol_err_path) else {'err_var_frac': None, 'err_var_fail': None, 'err_mean': None, 'err_std': None, 'err_var_error': 'File missing'}
+        mmol_err_var = check_error_map_variation(mmol_err_path) if mmol_err_path and os.path.exists(mmol_err_path) else {'err_var_frac': None, 'err_var_fail': None, 'err_mean': None, 'err_std': None, 'err_var_error': 'File missing'}
+
         # Aggregate all results
         result = {
             'KGAS_ID': kgas_id,
@@ -124,7 +168,31 @@ def main():
             'wcs_ico': wcs_ico,
             'wcs_lco': wcs_lco,
             'wcs_sigma_mol': wcs_sigma_mol,
-            'wcs_mmol': wcs_mmol
+            'wcs_mmol': wcs_mmol,
+            # New QA checks:
+            'velaxis_cdelt3': cdelt3,
+            'velaxis_crval3': crval3,
+            'velaxis_crpix3': crpix3,
+            'velaxis_cunit3': cunit3,
+            'cube_unit_check': cube_unit_check,
+            'mask_unit_check': mask_unit_check,
+            'ico_unit_check': ico_unit_check,
+            'lco_unit_check': lco_unit_check,
+            'sigma_mol_unit_check': sigma_mol_unit_check,
+            'mmol_unit_check': mmol_unit_check,
+            'ico_positive_check': ico_positive_check,
+            'lco_positive_check': lco_positive_check,
+            'sigma_mol_positive_check': sigma_mol_positive_check,
+            'mmol_positive_check': mmol_positive_check,
+            'mask_nonblank_check': mask_nonblank_check,
+            'ico_err_unit_check': ico_err_unit_check,
+            'lco_err_unit_check': lco_err_unit_check,
+            'sigma_mol_err_unit_check': sigma_mol_err_unit_check,
+            'mmol_err_unit_check': mmol_err_unit_check,
+            'ico_err_var': ico_err_var,
+            'lco_err_var': lco_err_var,
+            'sigma_mol_err_var': sigma_mol_err_var,
+            'mmol_err_var': mmol_err_var
         }
         # Add flags for failed checks
         result['flag_round_beam'] = not beam_units_result['round_beam']

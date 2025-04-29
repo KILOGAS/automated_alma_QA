@@ -2,7 +2,22 @@ def print_qa_summary(kgas_ids, results, skipped):
     n_total = len(kgas_ids)
     n_skipped = len(skipped)
     n_checked = len(results)
-    n_flagged = sum(1 for r in results if r['edge_flag'] or r['flag_round_beam'] or r['flag_kelvin_units'] or r.get('flag_sigma_mol_ico', False) or r.get('flag_lco_ico', False) or r.get('flag_mmol_lco', False) or r.get('flag_cube_detected', False) or r.get('flag_ico_detected', False) or r.get('flag_lco_detected', False) or r.get('flag_lco_gt_ico', False) or r.get('flag_scaling_consistency', False))
+    # Count flagged if any fail_unit or not fits_compliant in any unit check
+    def any_unit_flag(r):
+        for key in [
+            'cube_unit_check', 'mask_unit_check', 'ico_unit_check', 'lco_unit_check', 'sigma_mol_unit_check', 'mmol_unit_check',
+            'ico_err_unit_check', 'lco_err_unit_check', 'sigma_mol_err_unit_check', 'mmol_err_unit_check']:
+            unit_check = r.get(key, {})
+            if unit_check.get('fail_unit', False) or unit_check.get('fits_compliant') is False:
+                return True
+        return False
+    def any_err_var_flag(r):
+        for key in ['ico_err_var', 'lco_err_var', 'sigma_mol_err_var', 'mmol_err_var']:
+            err_var = r.get(key, {})
+            if err_var.get('err_var_fail', False):
+                return True
+        return False
+    n_flagged = sum(1 for r in results if r['edge_flag'] or r['flag_round_beam'] or r['flag_kelvin_units'] or r.get('flag_sigma_mol_ico', False) or r.get('flag_lco_ico', False) or r.get('flag_mmol_lco', False) or r.get('flag_cube_detected', False) or r.get('flag_ico_detected', False) or r.get('flag_lco_detected', False) or r.get('flag_lco_gt_ico', False) or r.get('flag_scaling_consistency', False) or any_unit_flag(r) or any_err_var_flag(r))
     n_passed = n_checked - n_flagged
     print(f"\nQA Summary:")
     print(f"  Total KGAS IDs: {n_total}")
@@ -109,6 +124,64 @@ def print_detailed_report(results):
             else:
                 print(f"  [PASS] WCS validation {label}")
 
+        # Velocity axis info
+        print(f"  Velocity axis: cdelt3={r.get('velaxis_cdelt3')}, crval3={r.get('velaxis_crval3')}, crpix3={r.get('velaxis_crpix3')}, cunit3={r.get('velaxis_cunit3')}")
+
+        # Unit checks
+        for key, label in [
+            ('cube_unit_check', 'Cube'),
+            ('mask_unit_check', 'Mask'),
+            ('ico_unit_check', 'ICO'),
+            ('lco_unit_check', 'LCO'),
+            ('sigma_mol_unit_check', 'Sigma_mol'),
+            ('mmol_unit_check', 'Mmol'),
+            ('ico_err_unit_check', 'ICO error'),
+            ('lco_err_unit_check', 'LCO error'),
+            ('sigma_mol_err_unit_check', 'Sigma_mol error'),
+            ('mmol_err_unit_check', 'Mmol error')]:
+            unit_check = r.get(key, {})
+            if unit_check.get('fits_compliant') is False:
+                print(f"  [FAIL] {label} unit: Not FITS-compliant: {unit_check.get('fits_compliance_error')}")
+            elif unit_check.get('fail_unit', False):
+                print(f"  [FAIL] {label} unit: {unit_check.get('unit')} (expected: {unit_check.get('expected_unit')}) Reason: {unit_check.get('fail_reason')}")
+            elif unit_check.get('fits_compliant') is None:
+                print(f"  [SKIP] {label} unit: {unit_check.get('fail_reason')}")
+            else:
+                print(f"  [PASS] {label} unit: {unit_check.get('unit')}")
+
+        # Positivity checks
+        for key, label in [
+            ('ico_positive_check', 'ICO'),
+            ('lco_positive_check', 'LCO'),
+            ('sigma_mol_positive_check', 'Sigma_mol'),
+            ('mmol_positive_check', 'Mmol')]:
+            pos_check = r.get(key, {})
+            if pos_check.get('fail_positive', False):
+                print(f"  [FAIL] {label} positivity: min={pos_check.get('min')}, max={pos_check.get('max')}")
+            else:
+                print(f"  [PASS] {label} positivity: min={pos_check.get('min')}, max={pos_check.get('max')}")
+
+        # Mask non-blank check
+        mask_check = r.get('mask_nonblank_check', {})
+        if mask_check.get('fail_mask_frac', False):
+            print(f"  [FAIL] Mask non-blank: {mask_check.get('mask_nonblank')} / {mask_check.get('mask_total')} (frac={mask_check.get('mask_frac')})")
+        else:
+            print(f"  [PASS] Mask non-blank: {mask_check.get('mask_nonblank')} / {mask_check.get('mask_total')} (frac={mask_check.get('mask_frac')})")
+
+        # Error map error variation checks
+        for key, label in [
+            ('ico_err_var', 'ICO error'),
+            ('lco_err_var', 'LCO error'),
+            ('sigma_mol_err_var', 'Sigma_mol error'),
+            ('mmol_err_var', 'Mmol error')]:
+            err_var = r.get(key, {})
+            if err_var.get('err_var_fail') is True:
+                print(f"  [FAIL] {label} error variation: std/mean={err_var.get('err_var_frac'):.3g} (std={err_var.get('err_std'):.3g}, mean={err_var.get('err_mean'):.3g})")
+            elif err_var.get('err_var_fail') is False:
+                print(f"  [PASS] {label} error variation: std/mean={err_var.get('err_var_frac'):.3g} (std={err_var.get('err_std'):.3g}, mean={err_var.get('err_mean'):.3g})")
+            else:
+                print(f"  [SKIP] {label} error variation: {err_var.get('err_var_error', 'Not checked')}")
+
 def print_flagged_report(results):
     n_flagged = sum(1 for r in results if r['edge_flag'] or r['flag_round_beam'] or r['flag_kelvin_units'] or r.get('flag_sigma_mol_ico', False) or r.get('flag_lco_ico', False) or r.get('flag_mmol_lco', False) or r.get('flag_cube_detected', False) or r.get('flag_ico_detected', False) or r.get('flag_lco_detected', False) or r.get('flag_lco_gt_ico', False) or r.get('flag_scaling_consistency', False))
     if n_flagged > 0:
@@ -138,5 +211,50 @@ def print_flagged_report(results):
                     print(f"    LCO/ICO scaling: ratio={r.get('lco_ico_ratio')}")
                 if r.get('flag_mmol_lco', False):
                     print(f"    Mmol/LCO scaling: ratio={r.get('mmol_lco_ratio')}")
+                # New: Unit checks
+                for key, label in [
+                    ('cube_unit_check', 'Cube'),
+                    ('mask_unit_check', 'Mask'),
+                    ('ico_unit_check', 'ICO'),
+                    ('lco_unit_check', 'LCO'),
+                    ('sigma_mol_unit_check', 'Sigma_mol'),
+                    ('mmol_unit_check', 'Mmol'),
+                    ('ico_err_unit_check', 'ICO error'),
+                    ('lco_err_unit_check', 'LCO error'),
+                    ('sigma_mol_err_unit_check', 'Sigma_mol error'),
+                    ('mmol_err_unit_check', 'Mmol error')]:
+                    unit_check = r.get(key, {})
+                    if unit_check.get('fits_compliant') is False:
+                        print(f"    [FAIL] {label} unit: Not FITS-compliant: {unit_check.get('fits_compliance_error')}")
+                    elif unit_check.get('fail_unit', False):
+                        print(f"    [FAIL] {label} unit: {unit_check.get('unit')} (expected: {unit_check.get('expected_unit')}) Reason: {unit_check.get('fail_reason')}")
+                    elif unit_check.get('fits_compliant') is None:
+                        print(f"    [SKIP] {label} unit: {unit_check.get('fail_reason')}")
+                # New: Positivity checks
+                for key, label in [
+                    ('ico_positive_check', 'ICO'),
+                    ('lco_positive_check', 'LCO'),
+                    ('sigma_mol_positive_check', 'Sigma_mol'),
+                    ('mmol_positive_check', 'Mmol')]:
+                    pos_check = r.get(key, {})
+                    if pos_check.get('fail_positive', False):
+                        print(f"    [FAIL] {label} positivity: min={pos_check.get('min')}, max={pos_check.get('max')}")
+                # New: Mask non-blank check
+                mask_check = r.get('mask_nonblank_check', {})
+                if mask_check.get('fail_mask_frac', False):
+                    print(f"    [FAIL] Mask non-blank: {mask_check.get('mask_nonblank')} / {mask_check.get('mask_total')} (frac={mask_check.get('mask_frac')})")
+                # New: Error map error variation checks
+                for key, label in [
+                    ('ico_err_var', 'ICO error'),
+                    ('lco_err_var', 'LCO error'),
+                    ('sigma_mol_err_var', 'Sigma_mol error'),
+                    ('mmol_err_var', 'Mmol error')]:
+                    err_var = r.get(key, {})
+                    if err_var.get('err_var_fail') is True:
+                        print(f"    [FAIL] {label} error variation: std/mean={err_var.get('err_var_frac'):.3g} (std={err_var.get('err_std'):.3g}, mean={err_var.get('err_mean'):.3g})")
+                    elif err_var.get('err_var_fail') is False:
+                        print(f"    [PASS] {label} error variation: std/mean={err_var.get('err_var_frac'):.3g} (std={err_var.get('err_std'):.3g}, mean={err_var.get('err_mean'):.3g})")
+                    else:
+                        print(f"    [SKIP] {label} error variation: {err_var.get('err_var_error', 'Not checked')}")
     else:
         print("\nNo galaxies were flagged by the QA tests.") 
