@@ -8,7 +8,15 @@ This repository provides automated quality assurance (QA) tools for KILOGAS ALMA
 2. Run the QA scripts on your files (see example usage below).
 3. Review the output report for any flagged issues or errors.
 
-## QA Checks (≤50 words each)
+## Example Usage
+In main.py
+"""
+# CONFIGURATION (edit these paths as needed)
+SUMMARY_TABLE_PATH = './../DR1_co2-1_10.0kmps_DP_QA0_simple.csv'  # <-- update this to table with KGAS IDs column (1-N)
+BASE_DIR = './../products/matched'  # absolute product directory path or relative to this script
+"""
+
+## QA Checks
 - **FITS File Verification**: Ensures FITS files are readable and conform to standards using Astropy's verification machinery.
 - **Header Verification**: Checks for required header keywords and FITS-legal formatting.
 - **WCS Validation**: Validates WCS presence, required keywords, and instantiation; reports missing or malformed WCS.
