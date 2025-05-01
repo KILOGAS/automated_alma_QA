@@ -20,10 +20,10 @@ def find_kgas_files(base_dir, kgas_id):
     files['mask'] = os.path.join(kgas_dir, f"{kgas_id}_mask_cube.fits")
     # Moment maps
     moment_dir = os.path.join(kgas_dir, 'moment_maps')
-    files['ico'] = os.path.join(moment_dir, f"{kgas_id}_expanded_pruned_subcube_pbcorr_Ico_K_kms-1.fits")
-    files['lco'] = os.path.join(moment_dir, f"{kgas_id}_expanded_pruned_subcube_pbcorr_Lco_K_kms-1_pc2.fits")
-    files['sigma_mol'] = os.path.join(moment_dir, f"{kgas_id}_expanded_pruned_subcube_pbcorr_log_mmol_pc-2.fits")
-    files['mmol'] = os.path.join(moment_dir, f"{kgas_id}_expanded_pruned_subcube_pbcorr_log_mmol_pix-1.fits")
+    files['ico'] = os.path.join(moment_dir, f"{kgas_id}_Ico_K_kms-1.fits")
+    files['lco'] = os.path.join(moment_dir, f"{kgas_id}_Lco_K_kms-1_pc2.fits")
+    files['sigma_mol'] = os.path.join(moment_dir, f"{kgas_id}_mmol_pc-2.fits")
+    files['mmol'] = os.path.join(moment_dir, f"{kgas_id}_mmol_pix-1.fits")
     return files
 
 def read_fits_header(fits_path):

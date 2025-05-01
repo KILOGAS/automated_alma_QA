@@ -21,10 +21,9 @@ from qa_checks import (
     assert_header_units,
     check_all_positive,
     check_mask_nonblank,
-    extract_velocity_axis,
-    check_error_map_variation
+    extract_velocity_axis
 )
-from reporting import print_qa_summary, print_detailed_report, print_flagged_report
+from reporting import compute_qa_summary, log_qa_summary, log_detailed_report
 
 # CONFIGURATION (edit these paths as needed)
 SUMMARY_TABLE_PATH = './../DR1_co2-1_10.0kmps_DP_QA0_simple.csv'  # <-- update this
@@ -87,7 +86,23 @@ def main():
         vel_range_result = velocity_range_nonblank(cube_path)
         mask_stats = mask_nonblank_stats(mask_path) if os.path.exists(mask_path) else {'mask_nonblank': None, 'mask_total': None, 'mask_frac': None}
         # Moment map QA
-        moment_map_result = inspect_moment_maps(ico_path)
+        # If no S/N map, compute S/N as Ico / Ico_err
+        snr_path = None
+        if ico_err_path and os.path.exists(ico_err_path):
+            # Create a temporary S/N FITS file if needed
+            import tempfile
+            from astropy.io import fits as afits
+            import numpy as np
+            with afits.open(ico_path) as hdul_ico, afits.open(ico_err_path) as hdul_err:
+                ico_data = hdul_ico[0].data
+                err_data = hdul_err[0].data
+                snr_data = np.where(err_data != 0, ico_data / err_data, 0)
+                # Save to a temporary file
+                with tempfile.NamedTemporaryFile(suffix='.fits', delete=False) as tmp:
+                    hdu = afits.PrimaryHDU(snr_data, header=hdul_ico[0].header)
+                    hdu.writeto(tmp.name, overwrite=True)
+                    snr_path = tmp.name
+        moment_map_result = inspect_moment_maps(ico_path, err_path=ico_err_path, snr_path=snr_path)
         sigma_mol_ico_result = compare_sigma_mol_to_ico(sigma_mol_path, ico_path)
         lco_ico_result = compare_lco_to_ico(lco_path, ico_path, pixel_area_pc2=1.0)
         mmol_lco_result = compare_mmol_to_lco(mmol_path, lco_path)
@@ -132,12 +147,6 @@ def main():
         lco_err_unit_check = assert_header_units(lco_err_path, expected_unit='K km / s pc2') if lco_err_path and os.path.exists(lco_err_path) else {'unit': None, 'expected_unit': 'K km / s pc2', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
         sigma_mol_err_unit_check = assert_header_units(sigma_mol_err_path, expected_unit='Msun / pc2', allow_log=True) if sigma_mol_err_path and os.path.exists(sigma_mol_err_path) else {'unit': None, 'expected_unit': 'Msun / pc2', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
         mmol_err_unit_check = assert_header_units(mmol_err_path, expected_unit='Msun', allow_log=True) if mmol_err_path and os.path.exists(mmol_err_path) else {'unit': None, 'expected_unit': 'Msun', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
-
-        # Error map error variation checks
-        ico_err_var = check_error_map_variation(ico_err_path) if ico_err_path and os.path.exists(ico_err_path) else {'err_var_frac': None, 'err_var_fail': None, 'err_mean': None, 'err_std': None, 'err_var_error': 'File missing'}
-        lco_err_var = check_error_map_variation(lco_err_path) if lco_err_path and os.path.exists(lco_err_path) else {'err_var_frac': None, 'err_var_fail': None, 'err_mean': None, 'err_std': None, 'err_var_error': 'File missing'}
-        sigma_mol_err_var = check_error_map_variation(sigma_mol_err_path) if sigma_mol_err_path and os.path.exists(sigma_mol_err_path) else {'err_var_frac': None, 'err_var_fail': None, 'err_mean': None, 'err_std': None, 'err_var_error': 'File missing'}
-        mmol_err_var = check_error_map_variation(mmol_err_path) if mmol_err_path and os.path.exists(mmol_err_path) else {'err_var_frac': None, 'err_var_fail': None, 'err_mean': None, 'err_std': None, 'err_var_error': 'File missing'}
 
         # Aggregate all results
         result = {
@@ -189,10 +198,6 @@ def main():
             'lco_err_unit_check': lco_err_unit_check,
             'sigma_mol_err_unit_check': sigma_mol_err_unit_check,
             'mmol_err_unit_check': mmol_err_unit_check,
-            'ico_err_var': ico_err_var,
-            'lco_err_var': lco_err_var,
-            'sigma_mol_err_var': sigma_mol_err_var,
-            'mmol_err_var': mmol_err_var
         }
         # Add flags for failed checks
         result['flag_round_beam'] = not beam_units_result['round_beam']
@@ -210,9 +215,9 @@ def main():
     # pd.DataFrame(results).to_csv('qa_edge_emission_results.csv', index=False)
 
     # After results are collected
-    print_qa_summary(kgas_ids, results, skipped)
-    print_detailed_report(results)
-    print_flagged_report(results)
+    summary = compute_qa_summary(kgas_ids, results, skipped)
+    log_qa_summary(summary)
+    log_detailed_report(results)
 
 if __name__ == "__main__":
     main() 

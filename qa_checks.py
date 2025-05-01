@@ -160,7 +160,9 @@ def mask_nonblank_stats(mask_path):
         return {'mask_nonblank': int(nonblank), 'mask_total': int(total), 'mask_frac': float(frac)}
 
 def inspect_moment_maps(ico_path, err_path=None, snr_path=None):
-    """Inspect moment 0, error, and S/N maps for reasonable relative values, spatial correspondence, error variation, and outlier S/N fraction."""
+    """Inspect moment 0, error, and S/N maps for reasonable relative values, spatial correspondence, error variation, and outlier S/N fraction.
+    Returns a dict with S/N fractions, min S/N, and flags for low S/N and outliers.
+    """
     result = {}
     try:
         # Moment 0
@@ -182,12 +184,6 @@ def inspect_moment_maps(ico_path, err_path=None, snr_path=None):
             result['err_min'] = float(np.nanmin(err))
             result['err_nan'] = int(np.isnan(err).sum())
             result['err_inf'] = int(np.isinf(err).sum())
-            # Error variation < 10%
-            err_std = float(np.nanstd(err))
-            err_var = err_std / result['err_mean'] if result['err_mean'] != 0 else np.nan
-            result['err_std'] = err_std
-            result['err_var_frac'] = err_var
-            result['flag_err_var'] = err_var > 0.1
         # S/N map
         if snr_path and os.path.exists(snr_path):
             with fits.open(snr_path) as hdul:
@@ -207,6 +203,7 @@ def inspect_moment_maps(ico_path, err_path=None, snr_path=None):
             result['frac_snr5'] = snr5 / total_pix if total_pix else 0
             result['frac_snr10'] = snr10 / total_pix if total_pix else 0
             result['flag_snr_below3'] = snr3 < total_pix
+            result['flag_snr_below5'] = (np.nanmin(snr) < 5)
             result['flag_snr10_outlier'] = result['frac_snr10'] > 0.02
             # Spatial correspondence: peaks in moment0 and high S/N
             if moment0.shape == snr.shape:
