@@ -1,4 +1,4 @@
-# Generic FITS Data Product QA Pipeline
+# ALMA FITS Data Product QA Pipeline
 
 ## Introduction
 This repository provides automated quality assurance (QA) tools for FITS data products. It verifies FITS file integrity, WCS validity, header units, S/N map statistics, and physical consistency of derived maps, ensuring robust, reproducible, and standards-compliant data products for scientific analysis.
@@ -17,7 +17,7 @@ This repository provides automated quality assurance (QA) tools for FITS data pr
   - Other products: mask, ico, lco, sigma_mol, mmol, etc.
 - See the example `config.md` for details.
 
-## QA Checks (≤50 words each)
+## QA Checks
 - **FITS File Verification**: Ensures FITS files are readable and conform to standards using Astropy's verification machinery.
 - **Header Verification**: Checks for required header keywords and FITS-legal formatting.
 - **WCS Validation**: Validates WCS presence, required keywords, and instantiation; reports missing or malformed WCS.
