@@ -218,8 +218,8 @@ def inspect_moment_maps(ico_path, err_path=None, snr_path=None):
         result['moment_map_error'] = str(e)
     return result
 
-def compare_sigma_mol_to_ico(sigma_mol_path, ico_path):
-    """Compare Sigma_mol map scaling to moment 0 map (factor 6.2–1.6, inclination dependent)."""
+def compare_sigma_mol_to_ico(sigma_mol_path, ico_path, scale_factor=6.2):
+    """Compare Sigma_mol map scaling to moment 0 map (expected_scale_factor)."""
     try:
         with fits.open(sigma_mol_path) as hdul:
             sigma_mol = hdul[0].data
@@ -229,7 +229,7 @@ def compare_sigma_mol_to_ico(sigma_mol_path, ico_path):
         if np.nanmax(sigma_mol) < 10:  # assume log10(Msun/pc^2)
             sigma_mol = 10 ** sigma_mol
         ratio = np.nanmean(sigma_mol) / np.nanmean(ico) if np.nanmean(ico) != 0 else np.nan
-        flag = not (1.6 <= ratio <= 6.2)
+        flag = not (scale_factor*0.9 <= ratio <= scale_factor*1.1) # 10% buffer for e.g., 1+z correction
         return {'sigma_mol_ico_ratio': float(ratio), 'flag_sigma_mol_ico': flag}
     except Exception as e:
         return {'sigma_mol_ico_ratio': np.nan, 'flag_sigma_mol_ico': True, 'sigma_mol_ico_error': str(e)}
@@ -266,14 +266,64 @@ def compare_mmol_to_lco(mmol_path, lco_path):
     except Exception as e:
         return {'mmol_lco_ratio': np.nan, 'flag_mmol_lco': True, 'mmol_lco_error': str(e)}
 
-def check_cube_detection(cube_path, threshold_sigma=3):
-    """Check for detected signal in the cube (flag if no detection above threshold)."""
+def check_cube_detection(cube_path, threshold_sigma=5, min_voxels=5, min_consecutive_channels=3):
+    """
+    Efficient detection test for large spectral cubes.
+    Requires:
+      - > min_voxels above threshold
+      - ≥ min_consecutive_channels above threshold in any (y, x) pixel spectrum
+    """
+
     with fits.open(cube_path) as hdul:
-        data = hdul[0].data
-        rms = np.nanstd(data)
-        max_val = np.nanmax(data)
-        detected = max_val > threshold_sigma * rms
-        return {'cube_detected': detected, 'cube_max': float(max_val), 'cube_rms': float(rms)}
+        data = hdul[0].data  # shape: (spectral, y, x)
+
+    if data.ndim != 3:
+        raise ValueError("Expected 3D data (spectral, y, x)")
+
+    # Compute RMS globally (assumes line-free channels are not isolated)
+    rms = np.nanstd(data)
+    threshold = threshold_sigma * rms
+    max_val = np.nanmax(data)
+
+    # Binary mask of voxels above threshold
+    above = data > threshold
+
+    # Count total above-threshold voxels
+    n_above = np.count_nonzero(above)
+
+    # Reshape for vectorized per-spectrum analysis
+    spec_len, ny, nx = above.shape
+    flat = above.reshape(spec_len, -1)  # shape: (spec, npix)
+
+    # Identify runs of Trues in each pixel's spectrum
+    # Compute diff along spectral axis to identify starts and ends
+    diff = np.diff(np.pad(flat.astype(int), ((1, 1), (0, 0)), mode='constant'), axis=0)
+
+    run_starts = np.where(diff == 1)
+    run_ends = np.where(diff == -1)
+
+    # Run lengths
+    run_lengths = run_ends[0] - run_starts[0]
+
+    # Match positions (pixels)
+    run_pixels = run_starts[1]
+    long_enough = run_lengths >= min_consecutive_channels
+
+    # Any pixel with a long-enough run is a detection
+    detected_contiguous = np.any(long_enough)
+
+    detected = n_above > min_voxels and detected_contiguous
+
+    return {
+        'cube_detected': detected,
+        'cube_max': float(max_val),
+        'cube_rms': float(rms),
+        'cube_n_voxels_above': int(n_above),
+        'cube_detection_threshold': threshold_sigma,
+        'cube_detection_min_voxels': min_voxels,
+        'cube_detection_min_channels': min_consecutive_channels,
+        'cube_contiguous_channels_found': bool(detected_contiguous)
+    }
 
 def check_map_detection(map_path, threshold_sigma=3):
     """Check for detected signal in a moment map (flag if no detection above threshold)."""
@@ -358,10 +408,10 @@ def assert_header_units(fits_path, expected_unit, allow_log=False):
                 reason = f'Unit is log: {unit}'
             else:
                 try:
-                    u = Unit(unit, format='fits')
-                    if str(u) != expected_unit:
+                    #u = Unit(unit, format='fits')
+                    if unit != expected_unit:
                         fail = True
-                        reason = f'Unit mismatch: {unit} != {expected_unit}'
+                        reason = f'Unit mismatch: {str(u)} != {expected_unit}'
                 except UnitsError as ue:
                     fail = True
                     reason = f'Unit parse error: {ue}'

@@ -22,7 +22,7 @@ def compute_qa_summary(kgas_ids, results, skipped):
     n_total = len(kgas_ids)
     n_skipped = len(skipped)
     n_checked = len(results)
-    flagged = [r['KGAS_ID'] for r in results if (
+    flagged = [r['object_id'] for r in results if (
         r['edge_flag'] or r['flag_round_beam'] or r['flag_kelvin_units'] or r.get('flag_sigma_mol_ico', False) or r.get('flag_lco_ico', False) or r.get('flag_mmol_lco', False) or r.get('flag_cube_detected', False) or r.get('flag_ico_detected', False) or r.get('flag_lco_detected', False) or r.get('flag_lco_gt_ico', False) or r.get('flag_scaling_consistency', False) or
         any(r.get(key, {}).get('fail_unit', False) or r.get(key, {}).get('fits_compliant') is False for key in [
             'cube_unit_check', 'mask_unit_check', 'ico_unit_check', 'lco_unit_check', 'sigma_mol_unit_check', 'mmol_unit_check',
@@ -51,16 +51,23 @@ def log_qa_summary(summary: QASummary):
 
 def log_detailed_report(results: List[Dict[str, Any]]):
     for r in results:
-        logging.info(f"\nGalaxy {r['KGAS_ID']}:")
-        # Detection checks
-        for key, label in [
-            ('flag_cube_detected', 'Cube detection'),
-            ('flag_ico_detected', 'ICO detection'),
-            ('flag_lco_detected', 'LCO detection')]:
-            if r.get(key, False):
-                logging.warning(f"  [FAIL] {label}")
+        logging.info(f"\nObject {r['object_id']}:")
+        # Detection checks (unmasked and masked)
+        if r.get('flag_cube_detected', False):
+            logging.warning(f"  [FAIL] Unmasked cube detection: max={r.get('cube_max')}, rms={r.get('cube_rms')}, n_voxels_above={r.get('cube_n_voxels_above')} (min required: {r.get('cube_detection_min_voxels', 5)})")
+        else:
+            logging.info(f"  [PASS] Unmasked cube detection: max={r.get('cube_max')}, rms={r.get('cube_rms')}, n_voxels_above={r.get('cube_n_voxels_above')} (min required: {r.get('cube_detection_min_voxels', 5)})")
+        if r.get('masked_cube_detected', False) is not None:
+            if not r.get('masked_cube_detected', False):
+                logging.warning(f"  [FAIL] Masked cube detection: max={r.get('masked_cube_max')}, rms={r.get('masked_cube_rms')}, n_voxels_above={r.get('masked_cube_n_voxels_above')} (min required: {r.get('cube_detection_min_voxels', 5)})")
             else:
-                logging.info(f"  [PASS] {label}")
+                logging.info(f"  [PASS] Masked cube detection: max={r.get('masked_cube_max')}, rms={r.get('masked_cube_rms')}, n_voxels_above={r.get('masked_cube_n_voxels_above')} (min required: {r.get('cube_detection_min_voxels', 5)})")
+        # Integrated flux comparison
+        logging.info(f"  Total integrated flux (masked): {r.get('masked_flux')}")
+        logging.info(f"  Total integrated flux (unmasked): {r.get('unmasked_flux')}")
+        logging.info(f"  Flux ratio (masked/unmasked): {r.get('flux_ratio')}")
+        if r.get('flag_flux_diff', False):
+            logging.warning(f"  [FAIL] Major difference in total integrated flux between masked and unmasked cubes!")
         # LCO > ICO
         if r.get('flag_lco_gt_ico', False):
             logging.warning(f"  [FAIL] LCO > ICO: lco_sum={r.get('lco_sum')}, ico_sum={r.get('ico_sum')}, lco_mean={r.get('lco_mean')}, ico_mean={r.get('ico_mean')}")
@@ -132,7 +139,8 @@ def log_detailed_report(results: List[Dict[str, Any]]):
             logging.info(f"  [PASS] Mmol/LCO scaling: ratio={r.get('mmol_lco_ratio')}")
         # WCS validation
         for key, label in [
-            ('wcs_cube', 'Cube'),
+            ('wcs_masked_cube', 'Masked Cube'),
+            ('wcs_unmasked_cube', 'Unmasked Cube'),
             ('wcs_mask', 'Mask'),
             ('wcs_ico', 'ICO'),
             ('wcs_lco', 'LCO'),
@@ -145,7 +153,8 @@ def log_detailed_report(results: List[Dict[str, Any]]):
                 logging.info(f"  [PASS] WCS validation {label}")
         # Unit checks
         for key, label in [
-            ('cube_unit_check', 'Cube'),
+            ('masked_cube_unit_check', 'Masked Cube'),
+            ('unmasked_cube_unit_check', 'Unmasked Cube'),
             ('mask_unit_check', 'Mask'),
             ('ico_unit_check', 'ICO'),
             ('lco_unit_check', 'LCO'),

@@ -1,29 +1,42 @@
 import os
 import pandas as pd
 from astropy.io import fits
+import yaml
+
+def load_config(config_path):
+    """Load YAML config from config.md (YAML frontmatter)."""
+    with open(config_path, 'r') as f:
+        # Skip lines until first '---'
+        while True:
+            line = f.readline()
+            if not line:
+                raise ValueError('No YAML frontmatter found in config file')
+            if line.strip() == '---':
+                break
+        yaml_lines = []
+        for line in f:
+            if line.strip() == '---':
+                break
+            yaml_lines.append(line)
+        config = yaml.safe_load(''.join(yaml_lines))
+    return config
 
 def load_summary_table(summary_path):
-    """Load summary table and return list of KGAS IDs to process (as 'KGAS{ID}')."""
+    """Load summary table and return list of object IDs to process (as strings)."""
     df = pd.read_csv(summary_path) if summary_path.endswith('.csv') else pd.read_excel(summary_path)
-    # Ensure KGAS_ID is int, then create formatted string
-    df['KGAS_ID_INT'] = df['KGAS_ID']
-    df['KGAS_ID'] = df['KGAS_ID_INT'].apply(lambda x: f"KGAS{int(x)}")
-    return df['KGAS_ID'].tolist(), df
+    # Use the first column as object_id if not specified
+    if 'object_id' not in df.columns:
+        df['object_id'] = df.iloc[:, 0].astype(str)
+    return df['object_id'].tolist(), df
 
-def find_kgas_files(base_dir, kgas_id):
-    """Find relevant FITS files for a given KGAS ID."""
-    kgas_dir = os.path.join(base_dir, kgas_id)
+def find_data_files(config, object_id):
+    """Find relevant FITS files for a given object ID using config patterns. Returns both unmaskedcube and maskedcube if present."""
+    base_dir = config['data_root']
+    patterns = config['file_patterns']
     files = {}
-    # Cube
-    files['cube'] = os.path.join(kgas_dir, f"{kgas_id}_expanded_pruned_subcube.fits")
-    # Mask
-    files['mask'] = os.path.join(kgas_dir, f"{kgas_id}_mask_cube.fits")
-    # Moment maps
-    moment_dir = os.path.join(kgas_dir, 'moment_maps')
-    files['ico'] = os.path.join(moment_dir, f"{kgas_id}_Ico_K_kms-1.fits")
-    files['lco'] = os.path.join(moment_dir, f"{kgas_id}_Lco_K_kms-1_pc2.fits")
-    files['sigma_mol'] = os.path.join(moment_dir, f"{kgas_id}_mmol_pc-2.fits")
-    files['mmol'] = os.path.join(moment_dir, f"{kgas_id}_mmol_pix-1.fits")
+    for key, pattern in patterns.items():
+        rel_path = pattern.format(object_id=object_id)
+        files[key] = os.path.join(base_dir, object_id, rel_path) if 'moment_maps' not in rel_path else os.path.join(base_dir, object_id, rel_path)
     return files
 
 def read_fits_header(fits_path):
