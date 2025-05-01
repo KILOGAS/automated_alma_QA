@@ -28,7 +28,6 @@ BASE_DIR = './../products/matched'  # absolute product directory path or relativ
 - **Beam and Pixel Size**: Confirms round beams and correct pixel/beam units.
 - **S/N Map QA**: Computes fractions of pixels with S/N > 3, 5, 10; flags low S/N and outliers.
 - **Moment 0 & S/N Correspondence**: Verifies spatial correspondence between moment 0 peaks and high S/N regions.
-- **Error Map Variation**: Ensures error map variation is <20% (std/mean < 0.2) across all error maps; flags and reports the variance.
 - **Physical Consistency**: Checks scaling between Sigma_mol, L_CO, and moment 0 maps.
 - **All Positive Check**: Ensures all values in science maps are positive.
 - **Mask Non-Blank Check**: Ensures mask has sufficient non-blank pixels.
