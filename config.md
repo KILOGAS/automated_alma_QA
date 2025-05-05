@@ -10,8 +10,8 @@ file_patterns:
   sigma_mol: "moment_maps/{object_id}_mmol_pc-2.fits"
   mmol: "moment_maps/{object_id}_mmol_pix-1.fits"
 logging:
-  log_path: ./logs
-  report_to_file: true
+  log_path: ./../logs
+  report_to_file: false
 ---
 # Configuration for Generic FITS QA Pipeline
 #

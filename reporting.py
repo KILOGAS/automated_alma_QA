@@ -122,6 +122,15 @@ def log_detailed_report(results: List[Dict[str, Any]]):
         logging.info(f"    Fraction S/N > 3: {r.get('frac_snr3')}")
         logging.info(f"    Fraction S/N > 5: {r.get('frac_snr5')}")
         logging.info(f"    Fraction S/N > 10: {r.get('frac_snr10')}")
+        # SNR map consistency check
+        if r.get('flag_ico_snr_mismatch', False):
+            logging.warning(f"  [FAIL] ICO SNR map does not match ICO/ICO_err: {r.get('ico_snr_mismatch_summary', '')}")
+        if r.get('flag_lco_snr_mismatch', False):
+            logging.warning(f"  [FAIL] LCO SNR map does not match LCO/LCO_err: {r.get('lco_snr_mismatch_summary', '')}")
+        if r.get('flag_sigma_mol_snr_mismatch', False):
+            logging.warning(f"  [FAIL] Sigma_mol SNR map does not match Sigma_mol/Sigma_mol_err: {r.get('sigma_mol_snr_mismatch_summary', '')}")
+        if r.get('flag_mmol_snr_mismatch', False):
+            logging.warning(f"  [FAIL] Mmol SNR map does not match Mmol/Mmol_err: {r.get('mmol_snr_mismatch_summary', '')}")
         # Sigma_mol/ICO scaling
         if r.get('flag_sigma_mol_ico', False):
             logging.warning(f"  [FAIL] Sigma_mol/ICO scaling: ratio={r.get('sigma_mol_ico_ratio')}")

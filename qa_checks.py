@@ -212,6 +212,24 @@ def inspect_moment_maps(ico_path, err_path=None, snr_path=None):
                 overlap = np.sum(peak_mask & highsnr_mask)
                 result['peak_highsnr_overlap'] = int(overlap)
                 result['flag_peak_highsnr'] = overlap > 0
+                # --- SNR map consistency check ---
+                if 'err' in locals() and err.shape == snr.shape:
+                    snr_expected = np.where(err != 0, moment0 / err, 0)
+                    # Only compare where all are finite
+                    valid = np.isfinite(snr) & np.isfinite(snr_expected)
+                    if np.any(valid):
+                        diff = np.abs(snr[valid] - snr_expected[valid])
+                        rel_diff = diff / (np.abs(snr_expected[valid]) + 1e-8)
+                        mismatch = rel_diff > 0.01  # 1% tolerance
+                        frac_mismatch = np.sum(mismatch) / np.sum(valid)
+                        result['snr_mismatch_frac'] = float(frac_mismatch)
+                        result['flag_snr_mismatch'] = frac_mismatch > 0.01  # flag if >1% mismatch
+                        if result['flag_snr_mismatch']:
+                            result['snr_mismatch_summary'] = f"{frac_mismatch:.2%} of pixels differ by >1%"
+                    else:
+                        result['snr_mismatch_frac'] = None
+                        result['flag_snr_mismatch'] = True
+                        result['snr_mismatch_summary'] = 'No valid pixels for SNR comparison'
             else:
                 result['spatial_shape_mismatch'] = f"moment0 shape {moment0.shape} != snr shape {snr.shape}"
     except Exception as e:
@@ -469,4 +487,47 @@ def check_error_map_variation(err_map_path, threshold=0.2):
             fail = var_frac > threshold
             return {'err_var_frac': var_frac, 'err_var_fail': fail, 'err_mean': mean, 'err_std': std}
     except Exception as e:
-        return {'err_var_frac': np.nan, 'err_var_fail': True, 'err_mean': np.nan, 'err_std': np.nan, 'err_var_error': str(e)} 
+        return {'err_var_frac': np.nan, 'err_var_fail': True, 'err_mean': np.nan, 'err_std': np.nan, 'err_var_error': str(e)}
+
+def inspect_snr_consistency(map_path, err_path=None, snr_path=None, prefix='ico'):
+    """Check that the SNR map matches the ratio of map/err, flag if not."""
+    result = {}
+    try:
+        # Science map
+        with fits.open(map_path) as hdul:
+            hdul[0].verify('exception')
+            data = hdul[0].data
+        # Error map
+        if err_path and os.path.exists(err_path):
+            with fits.open(err_path) as hdul:
+                hdul[0].verify('exception')
+                err = hdul[0].data
+        else:
+            err = None
+        # S/N map
+        if snr_path and os.path.exists(snr_path):
+            with fits.open(snr_path) as hdul:
+                hdul[0].verify('exception')
+                snr = hdul[0].data
+            # SNR map consistency check
+            if err is not None and data.shape == snr.shape and err.shape == snr.shape:
+                snr_expected = np.where(err != 0, data / err, 0)
+                valid = np.isfinite(snr) & np.isfinite(snr_expected)
+                if np.any(valid):
+                    diff = np.abs(snr[valid] - snr_expected[valid])
+                    rel_diff = diff / (np.abs(snr_expected[valid]) + 1e-8)
+                    mismatch = rel_diff > 0.01  # 1% tolerance
+                    frac_mismatch = np.sum(mismatch) / np.sum(valid)
+                    result[f'{prefix}_snr_mismatch_frac'] = float(frac_mismatch)
+                    result[f'flag_{prefix}_snr_mismatch'] = frac_mismatch > 0.01
+                    if result[f'flag_{prefix}_snr_mismatch']:
+                        result[f'{prefix}_snr_mismatch_summary'] = f"{frac_mismatch:.2%} of pixels differ by >1%"
+                else:
+                    result[f'{prefix}_snr_mismatch_frac'] = None
+                    result[f'flag_{prefix}_snr_mismatch'] = True
+                    result[f'{prefix}_snr_mismatch_summary'] = 'No valid pixels for SNR comparison'
+            else:
+                result[f'{prefix}_snr_shape_mismatch'] = f"map shape {data.shape}, err shape {None if err is None else err.shape}, snr shape {snr.shape if 'snr' in locals() else None}"
+    except Exception as e:
+        result[f'{prefix}_snr_consistency_error'] = str(e)
+    return result 

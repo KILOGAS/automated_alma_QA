@@ -78,4 +78,10 @@ def find_error_map_paths(files):
     lco_err = files['lco'].replace('.fits', '_err.fits') if files.get('lco') else None
     sigma_mol_err = files['sigma_mol'].replace('.fits', '_err.fits') if files.get('sigma_mol') else None
     mmol_err = files['mmol'].replace('.fits', '_err.fits') if files.get('mmol') else None
-    return {'ico_err': ico_err, 'lco_err': lco_err, 'sigma_mol_err': sigma_mol_err, 'mmol_err': mmol_err} 
+    return {'ico_err': ico_err, 'lco_err': lco_err, 'sigma_mol_err': sigma_mol_err, 'mmol_err': mmol_err}
+
+def find_snr_map_path(config, object_id):
+    """Return the expected SNR map path for a given object_id, or None if not found."""
+    base_dir = config['data_root']
+    snr_map = os.path.join(base_dir, object_id, 'moment_maps', f'{object_id}_mom0_SN.fits')
+    return snr_map if os.path.exists(snr_map) else None 

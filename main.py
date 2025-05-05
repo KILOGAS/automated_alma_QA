@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from io_utils import load_config, load_summary_table, find_data_files, find_error_map_paths
+from io_utils import load_config, load_summary_table, find_data_files, find_error_map_paths, find_snr_map_path
 from qa_checks import (
     check_edge_emission,
     check_beam_and_units,
@@ -22,7 +22,8 @@ from qa_checks import (
     assert_header_units,
     check_all_positive,
     check_mask_nonblank,
-    extract_velocity_axis
+    extract_velocity_axis,
+    inspect_snr_consistency
 )
 from reporting import compute_qa_summary, log_qa_summary, log_detailed_report
 import logging
@@ -49,7 +50,7 @@ def compute_percentiles(fits_path):
 
 def get_failed_tests(result):
     failed = []
-    # Add all flags and unit/positivity/mask checks
+    # Detection and physical consistency flags
     for key, label in [
         ('edge_flag', 'Edge emission'),
         ('flag_round_beam', 'Beam roundness'),
@@ -63,6 +64,11 @@ def get_failed_tests(result):
         ('flag_lco_gt_ico', 'LCO > ICO'),
         ('flag_scaling_consistency', 'Scaling factor consistency'),
         ('flag_snr_below5', 'S/N < 5'),
+        # SNR map consistency for all products
+        ('flag_ico_snr_mismatch', 'ICO SNR mismatch'),
+        ('flag_lco_snr_mismatch', 'LCO SNR mismatch'),
+        ('flag_sigma_mol_snr_mismatch', 'Sigma_mol SNR mismatch'),
+        ('flag_mmol_snr_mismatch', 'Mmol SNR mismatch'),
     ]:
         if result.get(key, False):
             failed.append(label)
@@ -109,13 +115,16 @@ def write_report_to_file(report_lines, log_path):
     return out_path
 
 def main():
+    # --- Load configuration and summary table ---
     config = load_config(CONFIG_PATH)
     summary_table_path = config['summary_table']
     data_root = config['data_root']
     object_ids, summary_df = load_summary_table(summary_table_path)
     results = []
     skipped = []
+
     for object_id in object_ids:
+        # --- Find all relevant files for this object ---
         files = find_data_files(config, object_id)
         unmasked_cube_path = files['unmaskedcube']
         masked_cube_path = files['maskedcube']
@@ -124,44 +133,46 @@ def main():
         lco_path = files['lco']
         sigma_mol_path = files['sigma_mol']
         mmol_path = files['mmol']
-        # Find error map paths
         err_files = find_error_map_paths(files)
         ico_err_path = err_files['ico_err']
         lco_err_path = err_files['lco_err']
         mmol_err_path = err_files['mmol_err']
         sigma_mol_err_path = err_files['sigma_mol_err']
-        # Check for all required files (not error maps)
+        # --- Check for missing required files ---
         required_files = [unmasked_cube_path, masked_cube_path, mask_path, ico_path, lco_path, sigma_mol_path]
         missing = [f for f in required_files if f is None or not os.path.exists(f)]
         if missing:
             skipped.append(object_id)
             continue
-        # Detection checks (use unmasked cube)
+
+        # --- Detection checks ---
         unmasked_cube_detect_result = check_cube_detection(unmasked_cube_path, threshold_sigma=5, min_voxels=5, min_consecutive_channels=2)
-        # Masked cube detection (optional, for completeness)
         masked_cube_detect_result = check_cube_detection(masked_cube_path, threshold_sigma=5, min_voxels=5, min_consecutive_channels=2)
-        # LCO > ICO check
         lco_gt_ico_result = check_lco_larger_than_ico(lco_path, ico_path)
-        # Detection checks for ICO and LCO
         ico_detect_result = check_map_detection(ico_path)
         lco_detect_result = check_map_detection(lco_path)
-        # Scaling factor consistency (ICO/LCO, use error maps if present)
+
+        # --- Physical consistency checks ---
         scale_consistency_result = check_scaling_factor_consistency(
             ico_path, lco_path,
             err1_path=ico_err_path if ico_err_path and os.path.exists(ico_err_path) else None,
             err2_path=lco_err_path if lco_err_path and os.path.exists(lco_err_path) else None
         )
-        # Min/max/units for each map
+        sigma_mol_ico_result = compare_sigma_mol_to_ico(sigma_mol_path, ico_path)
+        mmol_lco_result = compare_mmol_to_lco(mmol_path, lco_path)
+        # lco_ico_result = compare_lco_to_ico(lco_path, ico_path, pixel_area_pc2=1.0) # requires pixel area in pc2
+
+        # --- Map statistics and percentiles ---
         ico_minmax = get_map_min_max_units(ico_path)
         lco_minmax = get_map_min_max_units(lco_path)
         sigma_mol_minmax = get_map_min_max_units(sigma_mol_path)
         mmol_minmax = get_map_min_max_units(mmol_path)
-        # Percentiles for each map
         ico_percentiles = compute_percentiles(ico_path)
         lco_percentiles = compute_percentiles(lco_path)
         sigma_mol_percentiles = compute_percentiles(sigma_mol_path)
         mmol_percentiles = compute_percentiles(mmol_path)
-        # Integrated flux for masked and unmasked cubes
+
+        # --- Integrated flux for masked and unmasked cubes ---
         def total_flux(cube_path):
             try:
                 from astropy.io import fits
@@ -173,10 +184,9 @@ def main():
         masked_flux = total_flux(masked_cube_path)
         unmasked_flux = total_flux(unmasked_cube_path)
         flux_ratio = masked_flux / unmasked_flux if (masked_flux is not None and unmasked_flux not in (None, 0)) else None
-        flag_flux_diff = False
-        if flux_ratio is not None:
-            flag_flux_diff = (flux_ratio < 0.8 or flux_ratio > 1.2)
-        # Run all QA checks (use masked cube for QA)
+        flag_flux_diff = (flux_ratio < 0.8 or flux_ratio > 1.2) if flux_ratio is not None else False
+
+        # --- QA checks on masked cube ---
         edge_result = check_edge_emission(masked_cube_path)
         beam_units_result = check_beam_and_units(masked_cube_path)
         pix_beam_result = measure_pixel_and_beam_size(masked_cube_path)
@@ -184,9 +194,13 @@ def main():
         max_result = measure_cube_max(masked_cube_path)
         vel_range_result = velocity_range_nonblank(masked_cube_path)
         mask_stats = mask_nonblank_stats(mask_path) if os.path.exists(mask_path) else {'mask_nonblank': None, 'mask_total': None, 'mask_frac': None}
-        # Moment map QA
+
+        # --- SNR map path (real or computed) ---
         snr_path = None
-        if ico_err_path and os.path.exists(ico_err_path):
+        real_snr_path = find_snr_map_path(config, object_id)
+        if real_snr_path:
+            snr_path = real_snr_path
+        elif ico_err_path and os.path.exists(ico_err_path):
             import tempfile
             from astropy.io import fits as afits
             with afits.open(ico_path) as hdul_ico, afits.open(ico_err_path) as hdul_err:
@@ -197,11 +211,15 @@ def main():
                     hdu = afits.PrimaryHDU(snr_data, header=hdul_ico[0].header)
                     hdu.writeto(tmp.name, overwrite=True)
                     snr_path = tmp.name
+
+        # --- SNR consistency checks for all products ---
+        snr_consistency_ico = inspect_snr_consistency(ico_path, err_path=ico_err_path, snr_path=snr_path, prefix='ico')
+        snr_consistency_lco = inspect_snr_consistency(lco_path, err_path=lco_err_path, snr_path=snr_path, prefix='lco')
+        snr_consistency_sigma_mol = inspect_snr_consistency(sigma_mol_path, err_path=sigma_mol_err_path, snr_path=snr_path, prefix='sigma_mol')
+        snr_consistency_mmol = inspect_snr_consistency(mmol_path, err_path=mmol_err_path, snr_path=snr_path, prefix='mmol')
         moment_map_result = inspect_moment_maps(ico_path, err_path=ico_err_path, snr_path=snr_path)
-        sigma_mol_ico_result = compare_sigma_mol_to_ico(sigma_mol_path, ico_path)
-        # lco_ico_result = compare_lco_to_ico(lco_path, ico_path, pixel_area_pc2=1.0) # requires pixel area in pc2
-        mmol_lco_result = compare_mmol_to_lco(mmol_path, lco_path)
-        # WCS validation for all products
+
+        # --- WCS validation for all products ---
         wcs_masked_cube = run_wcs_validation(masked_cube_path)
         wcs_unmasked_cube = run_wcs_validation(unmasked_cube_path)
         wcs_mask = run_wcs_validation(mask_path)
@@ -209,7 +227,8 @@ def main():
         wcs_lco = run_wcs_validation(lco_path)
         wcs_sigma_mol = run_wcs_validation(sigma_mol_path)
         wcs_mmol = run_wcs_validation(mmol_path)
-        # Velocity axis info (from masked cube)
+
+        # --- Velocity axis info (from masked cube) ---
         header = None
         try:
             from astropy.io import fits as afits
@@ -221,7 +240,8 @@ def main():
             cdelt3, crval3, crpix3, cunit3 = extract_velocity_axis(header)
         else:
             cdelt3 = crval3 = crpix3 = cunit3 = None
-        # Header unit checks
+
+        # --- Header unit checks ---
         masked_cube_unit_check = assert_header_units(masked_cube_path, expected_unit='K')
         unmasked_cube_unit_check = assert_header_units(unmasked_cube_path, expected_unit='K')
         mask_unit_check = assert_header_units(mask_path, expected_unit='')
@@ -229,19 +249,23 @@ def main():
         lco_unit_check = assert_header_units(lco_path, expected_unit='K km/s pc^2')
         sigma_mol_unit_check = assert_header_units(sigma_mol_path, expected_unit='Msun / pc2', allow_log=True)
         mmol_unit_check = assert_header_units(mmol_path, expected_unit='Msun', allow_log=True)
-        # All positive checks
+
+        # --- All positive checks ---
         ico_positive_check = check_all_positive(ico_path)
         lco_positive_check = check_all_positive(lco_path)
         sigma_mol_positive_check = check_all_positive(sigma_mol_path)
         mmol_positive_check = check_all_positive(mmol_path)
-        # Mask non-blank check
+
+        # --- Mask non-blank check ---
         mask_nonblank_check = check_mask_nonblank(mask_path)
-        # Error map unit checks
+
+        # --- Error map unit checks ---
         ico_err_unit_check = assert_header_units(ico_err_path, expected_unit='K km/s') if ico_err_path and os.path.exists(ico_err_path) else {'unit': None, 'expected_unit': 'K km/s', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
         lco_err_unit_check = assert_header_units(lco_err_path, expected_unit='K km/s pc^2') if lco_err_path and os.path.exists(lco_err_path) else {'unit': None, 'expected_unit': 'K km/s pc^2', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
         sigma_mol_err_unit_check = assert_header_units(sigma_mol_err_path, expected_unit='Msun / pc2', allow_log=True) if sigma_mol_err_path and os.path.exists(sigma_mol_err_path) else {'unit': None, 'expected_unit': 'Msun / pc2', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
         mmol_err_unit_check = assert_header_units(mmol_err_path, expected_unit='Msun', allow_log=True) if mmol_err_path and os.path.exists(mmol_err_path) else {'unit': None, 'expected_unit': 'Msun', 'fail_unit': None, 'fail_reason': 'File missing', 'fits_compliant': None, 'fits_compliance_error': 'File missing'}
-        # Aggregate all results
+
+        # --- Aggregate all results for this object ---
         result = {
             'object_id': object_id,
             **unmasked_cube_detect_result,
@@ -275,6 +299,10 @@ def main():
             **vel_range_result,
             **mask_stats,
             **moment_map_result,
+            **snr_consistency_ico,
+            **snr_consistency_lco,
+            **snr_consistency_sigma_mol,
+            **snr_consistency_mmol,
             **sigma_mol_ico_result,
             # **lco_ico_result, # SEE ABOVE, requires pixel area in pc2
             **mmol_lco_result,
@@ -315,11 +343,13 @@ def main():
         result['flag_lco_gt_ico'] = lco_gt_ico_result.get('flag_lco_gt_ico', False)
         result['flag_scaling_consistency'] = scale_consistency_result.get('flag_scaling_consistency', False)
         results.append(result)
-    # After results are collected
+
+    # --- Summarize and report results ---
     summary = compute_qa_summary(object_ids, results, skipped)
     log_qa_summary(summary)
     log_detailed_report(results)
-    # Flagged report
+
+    # --- Flagged report for failed tests ---
     flagged_lines = []
     flagged = summary.flagged
     for r in results:
@@ -336,7 +366,8 @@ def main():
         logging.warning("\nFlagged Objects and Failed Tests:")
         for line in flagged_lines:
             logging.warning(line)
-    # Write report to file if enabled
+
+    # --- Write report to file if enabled ---
     if config['logging']['report_to_file']:
         log_path = config['logging']['log_path']
         dt = datetime.now().strftime('%Y%m%d_%H%M%S')
