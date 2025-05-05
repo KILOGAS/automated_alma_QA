@@ -27,7 +27,10 @@ This repository provides automated quality assurance (QA) tools for FITS data pr
 - **Masked vs Unmasked Flux**: Compares total integrated flux in masked and unmasked cubes; flags if the ratio differs by >20%.
 - **Edge Emission**: Checks for missed emission at cube velocity edges.
 - **Beam and Pixel Size**: Confirms round beams and correct pixel/beam units.
-- **S/N Map QA**: Computes fractions of pixels with S/N > 3, 5, 10; flags low S/N and outliers. If no S/N map is provided, computes S/N as Ico / Ico_err.
+- **S/N Map QA and Consistency Checks**:
+  - Computes fractions of pixels with S/N > 3, 5, 10; flags low S/N and outliers.
+  - **SNR Map Consistency**: For each of the ICO, LCO, Sigma_mol, Mmol products, checks that the SNR map matches the ratio of the science map to its error map (with 1% tolerance):
+  - Flags and reports if the SNR map does not match the expected ratio for any product.
 - **Moment 0 & S/N Correspondence**: Verifies spatial correspondence between moment 0 peaks and high S/N regions.
 - **Physical Consistency**: Checks scaling between Sigma_mol, L_CO, and moment 0 maps.
 - **All Positive Check**: Ensures all values in science maps are positive.
