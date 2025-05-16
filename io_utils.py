@@ -30,13 +30,27 @@ def load_summary_table(summary_path):
     return df['object_id'].tolist(), df
 
 def find_data_files(config, object_id):
-    """Find relevant FITS files for a given object ID using config patterns. Returns both unmaskedcube and maskedcube if present."""
+    """Find relevant FITS files for a given object ID using config patterns. Returns both unmaskedcube and maskedcube if present.
+    Supports multiple patterns for a key (e.g., unmaskedcube as a list). Returns the first file found, or None if none exist.
+    """
     base_dir = config['data_root']
     patterns = config['file_patterns']
     files = {}
     for key, pattern in patterns.items():
-        rel_path = pattern.format(object_id=object_id)
-        files[key] = os.path.join(base_dir, object_id, rel_path) if 'moment_maps' not in rel_path else os.path.join(base_dir, object_id, rel_path)
+        # Support multiple patterns (list) for a key
+        if isinstance(pattern, list):
+            found = None
+            for pat in pattern:
+                rel_path = pat.format(object_id=object_id)
+                candidate = os.path.join(base_dir, object_id, rel_path)
+                if os.path.exists(candidate):
+                    found = candidate
+                    break
+            files[key] = found
+        else:
+            rel_path = pattern.format(object_id=object_id)
+            candidate = os.path.join(base_dir, object_id, rel_path)
+            files[key] = candidate if os.path.exists(candidate) else None
     return files
 
 def read_fits_header(fits_path):

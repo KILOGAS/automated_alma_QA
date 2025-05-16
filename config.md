@@ -2,7 +2,9 @@
 data_root: ./../products/matched
 summary_table: ./../DR1_co2-1_10.0kmps_DP_QA0_simple.csv
 file_patterns:
-  unmaskedcube: "{object_id}_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits"
+  unmaskedcube:
+    - "{object_id}_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits"
+    - "{object_id}_co2-1_10.0kmps_12m.image.pbcor.ifumatched.fits"
   maskedcube: "{object_id}_expanded_pruned_subcube.fits"
   mask: "{object_id}_mask_cube.fits"
   ico: "moment_maps/{object_id}_Ico_K_kms-1.fits"

@@ -11,7 +11,6 @@ from qa_checks import (
     mask_nonblank_stats,
     inspect_moment_maps,
     compare_sigma_mol_to_ico,
-    compare_lco_to_ico,
     compare_mmol_to_lco,
     check_cube_detection,
     check_map_detection,
