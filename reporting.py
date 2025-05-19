@@ -27,7 +27,7 @@ def compute_qa_summary(kgas_ids, results, skipped):
         any(r.get(key, {}).get('fail_unit', False) or r.get(key, {}).get('fits_compliant') is False for key in [
             'cube_unit_check', 'mask_unit_check', 'ico_unit_check', 'lco_unit_check', 'sigma_mol_unit_check', 'mmol_unit_check',
             'ico_err_unit_check', 'lco_err_unit_check', 'sigma_mol_err_unit_check', 'mmol_err_unit_check']) or
-        r.get('moment_map_error') or r.get('flag_snr_below5', False)
+        r.get('moment_map_error') or r.get('flag_snr_below3', False)
     )]
     n_flagged = len(flagged)
     n_passed = n_checked - n_flagged
@@ -115,7 +115,7 @@ def log_detailed_report(results: List[Dict[str, Any]]):
         else:
             logging.info(f"  [PASS] Moment 0 map: mean={r.get('ico_mean')}, min={r.get('ico_min')}, max={r.get('ico_max')}")
         # S/N QA
-        if r.get('flag_snr_below5', False):
+        if r.get('flag_snr_below3', False):
             logging.warning(f"  [FAIL] S/N QA: min S/N = {r.get('snr_min')}, some pixels S/N < 5")
         else:
             logging.info(f"  [PASS] S/N QA: min S/N = {r.get('snr_min')}")

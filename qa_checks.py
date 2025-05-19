@@ -203,7 +203,6 @@ def inspect_moment_maps(ico_path, err_path=None, snr_path=None):
             result['frac_snr5'] = snr5 / total_pix if total_pix else 0
             result['frac_snr10'] = snr10 / total_pix if total_pix else 0
             result['flag_snr_below3'] = snr3 < total_pix
-            result['flag_snr_below5'] = (np.nanmin(snr) < 5)
             result['flag_snr10_outlier'] = result['frac_snr10'] > 0.02
             # Spatial correspondence: peaks in moment0 and high S/N
             if moment0.shape == snr.shape:

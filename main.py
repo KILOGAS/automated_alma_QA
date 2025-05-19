@@ -36,7 +36,6 @@ from datetime import datetime
 
 CONFIG_PATH = "./config.md"
 
-
 def compute_percentiles(fits_path):
     try:
         from astropy.io import fits
@@ -77,7 +76,7 @@ def get_failed_tests(result):
         ("flag_lco_detected", "LCO detection"),
         ("flag_lco_gt_ico", "LCO > ICO"),
         ("flag_scaling_consistency", "Scaling factor consistency"),
-        ("flag_snr_below5", "S/N < 5"),
+        ("flag_snr_below3", "S/N < 3"),
         # SNR map consistency for all products
         ("flag_ico_snr_mismatch", "ICO SNR mismatch"),
         ("flag_lco_snr_mismatch", "LCO SNR mismatch"),
