@@ -1,6 +1,6 @@
 ---
-data_root: ./../products/matched
-summary_table: ./../DR1_co2-1_10.0kmps_DP_QA0_simple.csv
+data_root: ./../../DR1/Products/Full_sample_22_April/matched/
+summary_table: ./../sample/DR1_co2-1_10.0kmps_DP_QA0_simple.csv
 file_patterns:
   unmaskedcube:
     - "{object_id}_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits"
@@ -13,7 +13,7 @@ file_patterns:
   mmol: "moment_maps/{object_id}_mmol_pix-1.fits"
 logging:
   log_path: ./../logs
-  report_to_file: false
+  report_to_file: true
 ---
 # Configuration for Generic FITS QA Pipeline
 #
