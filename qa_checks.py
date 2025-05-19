@@ -7,10 +7,10 @@ from astropy.wcs import WCS
 from astropy.units import Unit, UnitsError
 from astropy import units as u
 
-def check_edge_emission(cube_path, edge_channels=3, threshold_sigma=3):
+def check_edge_emission(cube_path, edge_channels=1):
     """
-    Check for missed emission at velocity range edges.
-    Returns: dict with 'flag', 'max_edge', 'rms', 'threshold', 'details', 'error'.
+    Check for any detected pixels at velocity range edges.
+    Returns: dict with 'flag', 'edge_pixels', 'details', 'error'.
     """
     result = {}
     try:
@@ -18,17 +18,21 @@ def check_edge_emission(cube_path, edge_channels=3, threshold_sigma=3):
             hdul.verify('exception')
             data = hdul[0].data
             # Assume data shape is (velocity, y, x) or (z, y, x)
-            edge_start = data[:edge_channels].flatten()
-            edge_end = data[-edge_channels:].flatten()
-            edge_data = np.concatenate([edge_start, edge_end])
-            rms = np.std(edge_data)
-            max_edge = np.max(np.abs(edge_data))
-            threshold = threshold_sigma * rms
-            flag = max_edge > threshold
+            edge_start = data[:edge_channels]
+            edge_end = data[-edge_channels:]
+            
+            # Count non-zero pixels in edge channels
+            edge_pixels_start = np.count_nonzero(edge_start)
+            edge_pixels_end = np.count_nonzero(edge_end)
+            total_edge_pixels = edge_pixels_start + edge_pixels_end
+            
+            # Flag if any non-zero pixels found at edges
+            flag = total_edge_pixels > 0
+            
             details = {
-                'max_edge': float(max_edge),
-                'rms': float(rms),
-                'threshold': float(threshold),
+                'edge_pixels_start': int(edge_pixels_start),
+                'edge_pixels_end': int(edge_pixels_end),
+                'total_edge_pixels': int(total_edge_pixels),
                 'edge_channels': edge_channels
             }
             result.update({'flag': flag, 'details': details})
