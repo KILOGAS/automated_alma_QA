@@ -51,6 +51,13 @@ def find_data_files(config, object_id):
             rel_path = pattern.format(object_id=object_id)
             candidate = os.path.join(base_dir, object_id, rel_path)
             files[key] = candidate if os.path.exists(candidate) else None
+
+    # If config has a cube_root, use that (and a subfolder {object_id}) for unmaskedcube, otherwise fall back to data_root.
+    if "cube_root" in config:
+        unmasked_cube_path = os.path.join(config["cube_root"], object_id, object_id + "_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits")
+    else:
+        unmasked_cube_path = os.path.join(config["data_root"], object_id, object_id + "_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits")
+
     return files
 
 def read_fits_header(fits_path):
