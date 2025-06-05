@@ -57,6 +57,7 @@ def find_data_files(config, object_id):
         unmasked_cube_path = os.path.join(config["cube_root"], object_id, object_id + "_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits")
     else:
         unmasked_cube_path = os.path.join(config["data_root"], object_id, object_id + "_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits")
+    files["unmaskedcube"] = unmasked_cube_path
 
     return files
 
