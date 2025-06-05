@@ -76,7 +76,7 @@ def get_failed_tests(result):
         ("flag_lco_detected", "LCO detection"),
         ("flag_lco_gt_ico", "LCO > ICO"),
         ("flag_scaling_consistency", "Scaling factor consistency"),
-        ("flag_snr_below3", "S/N < 3"),
+        # ("flag_snr_below3", "S/N < 3"),  # Removed as per user request
         # SNR map consistency for all products
         ("flag_ico_snr_mismatch", "ICO SNR mismatch"),
         ("flag_lco_snr_mismatch", "LCO SNR mismatch"),
@@ -169,6 +169,7 @@ def main():
         ]
         missing = [f for f in required_files if f is None or not os.path.exists(f)]
         if missing:
+            logging.warning(f"Skipping object {object_id}: missing required files: {missing}")
             skipped.append(object_id)
             continue
 

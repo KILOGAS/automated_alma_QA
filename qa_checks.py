@@ -297,7 +297,7 @@ def compare_sigma_mol_to_ico(sigma_mol_path, ico_path, scale_factor=6.2):
         with fits.open(ico_path) as hdul:
             ico = hdul[0].data
         # Convert log(Sigma_mol) to linear if needed
-        if np.nanmax(sigma_mol) < 10:  # assume log10(Msun/pc^2)
+        if np.nanmax(sigma_mol) < 1:  # assume log10(Msun/pc^2)
             sigma_mol = 10**sigma_mol
         ratio = (
             np.nanmean(sigma_mol) / np.nanmean(ico) if np.nanmean(ico) != 0 else np.nan
@@ -340,8 +340,7 @@ def compare_mmol_to_lco(mmol_path, lco_path):
         with fits.open(lco_path) as hdul:
             lco = hdul[0].data
         # If mmol is log10, convert to linear
-
-        if np.nanmax(mmol) < 10:
+        if np.nanmax(mmol) < 1:
             mmol = 10**mmol
 
         ratio = (
