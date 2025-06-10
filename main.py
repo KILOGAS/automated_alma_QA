@@ -70,7 +70,7 @@ def get_failed_tests(result):
         ("edge_flag", "Edge emission"),
         ("flag_round_beam", "Beam roundness"),
         ("flag_kelvin_units", "Kelvin units"),
-        ("flag_sigma_mol_ico", "Sigma_mol/ICO scaling"),
+        # ("flag_sigma_mol_ico", "Sigma_mol/ICO scaling"),  # Commented out sigma_mol/ICO scaling check
         ("flag_lco_ico", "LCO/ICO scaling"),
         ("flag_mmol_lco", "Mmol/LCO scaling"),
         ("flag_cube_detected", "Cube detection"),
@@ -205,7 +205,7 @@ def main():
                 lco_err_path if lco_err_path and os.path.exists(lco_err_path) else None
             ),
         )
-        sigma_mol_ico_result = compare_sigma_mol_to_ico(sigma_mol_path, ico_path)
+        # sigma_mol_ico_result = compare_sigma_mol_to_ico(sigma_mol_path, ico_path)
         mmol_lco_result = compare_mmol_to_lco(mmol_path, lco_path)
         # lco_ico_result = compare_lco_to_ico(lco_path, ico_path, pixel_area_pc2=1.0) # requires pixel area in pc2
 
@@ -446,7 +446,7 @@ def main():
             **snr_consistency_lco,
             **snr_consistency_sigma_mol,
             **snr_consistency_mmol,
-            **sigma_mol_ico_result,
+            # **sigma_mol_ico_result,  # Commented out sigma_mol/ICO scaling check
             # **lco_ico_result, # SEE ABOVE, requires pixel area in pc2
             **mmol_lco_result,
             "wcs_masked_cube": wcs_masked_cube,

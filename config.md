@@ -1,7 +1,7 @@
 ---
-data_root: /arc/projects/KILOGAS/products/v0.1/matched/by_galaxy
-cube_root: /arc/projects/KILOGAS/cubes/v1.0/matched
-summary_table: /arc/projects/KILOGAS/qa/alma_product_qa/sample/DR1_co2-1_10.0kmps_DP_QA0_simple.csv
+data_root: ../../../products/v0.1/matched/by_galaxy
+cube_root: ../../../cubes/v1.0/matched
+summary_table: ../sample/DR1_co2-1_10.0kmps_DP_QA0_simple.csv
 file_patterns:
   unmaskedcube:
     - "{object_id}_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits"
