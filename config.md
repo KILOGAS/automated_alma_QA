@@ -1,16 +1,17 @@
 ---
-data_root: ./../../DR1/Products/Full_sample_22_April/matched/
-summary_table: ./../sample/DR1_co2-1_10.0kmps_DP_QA0_simple.csv
+data_root: /arc/projects/KILOGAS/products/v0.1/matched/by_galaxy
+cube_root: /arc/projects/KILOGAS/cubes/v1.0/matched
+summary_table: /arc/projects/KILOGAS/qa/alma_product_qa/sample/DR1_co2-1_10.0kmps_DP_QA0_simple.csv
 file_patterns:
   unmaskedcube:
     - "{object_id}_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits"
     - "{object_id}_co2-1_10.0kmps_12m.image.pbcor.ifumatched.fits"
-  maskedcube: "{object_id}_expanded_pruned_subcube.fits"
+  maskedcube: "{object_id}_clipped_cube.fits"
   mask: "{object_id}_mask_cube.fits"
-  ico: "moment_maps/{object_id}_Ico_K_kms-1.fits"
-  lco: "moment_maps/{object_id}_Lco_K_kms-1_pc2.fits"
-  sigma_mol: "moment_maps/{object_id}_mmol_pc-2.fits"
-  mmol: "moment_maps/{object_id}_mmol_pix-1.fits"
+  ico: "{object_id}_Ico_K_kms-1.fits"
+  lco: "{object_id}_Lco_K_kms-1_pc2.fits"
+  sigma_mol: "{object_id}_mmol_pc-2.fits"
+  mmol: "{object_id}_mmol_pix-1.fits"
 logging:
   log_path: ./../logs
   report_to_file: true
