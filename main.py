@@ -1,40 +1,42 @@
+import logging
 import os
+from datetime import datetime
+
 import numpy as np
 from io_utils import (
-    load_config,
-    load_summary_table,
     find_data_files,
     find_error_map_paths,
     find_snr_map_path,
+    load_config,
+    load_summary_table,
 )
 from qa_checks import (
-    check_edge_emission,
-    check_beam_and_units,
-    measure_pixel_and_beam_size,
-    measure_rms_cube_ends,
-    measure_cube_max,
-    velocity_range_nonblank,
-    mask_nonblank_stats,
-    inspect_moment_maps,
-    compare_sigma_mol_to_ico,
-    compare_mmol_to_lco,
-    check_cube_detection,
-    check_map_detection,
-    check_lco_larger_than_ico,
-    check_scaling_factor_consistency,
-    get_map_min_max_units,
-    run_wcs_validation,
     assert_header_units,
     check_all_positive,
+    check_beam_and_units,
+    check_cube_detection,
+    check_edge_emission,
+    check_lco_larger_than_ico,
+    check_map_detection,
     check_mask_nonblank,
+    check_scaling_factor_consistency,
+    compare_mmol_to_lco,
+    compare_sigma_mol_to_ico,
     extract_velocity_axis,
+    get_map_min_max_units,
+    inspect_moment_maps,
     inspect_snr_consistency,
+    mask_nonblank_stats,
+    measure_cube_max,
+    measure_pixel_and_beam_size,
+    measure_rms_cube_ends,
+    run_wcs_validation,
+    velocity_range_nonblank,
 )
-from reporting import compute_qa_summary, log_qa_summary, log_detailed_report
-import logging
-from datetime import datetime
+from reporting import compute_qa_summary, log_detailed_report, log_qa_summary
 
 CONFIG_PATH = "./config.md"
+
 
 def compute_percentiles(fits_path):
     try:
@@ -169,7 +171,9 @@ def main():
         ]
         missing = [f for f in required_files if f is None or not os.path.exists(f)]
         if missing:
-            logging.warning(f"Skipping object {object_id}: missing required files: {missing}")
+            logging.warning(
+                f"Skipping object {object_id}: missing required files: {missing}"
+            )
             skipped.append(object_id)
             continue
 
@@ -257,6 +261,7 @@ def main():
             snr_path = real_snr_path
         elif ico_err_path and os.path.exists(ico_err_path):
             import tempfile
+
             from astropy.io import fits as afits
 
             with afits.open(ico_path) as hdul_ico, afits.open(ico_err_path) as hdul_err:
