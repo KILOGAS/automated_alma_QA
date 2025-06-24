@@ -36,6 +36,13 @@ This repository provides automated quality assurance (QA) tools for FITS data pr
 - **All Positive Check**: Ensures all values in science maps are positive.
 - **Mask Non-Blank Check**: Ensures mask has sufficient non-blank pixels.
 - **Percentile Reporting**: Reports 0, 16, 50, 84, 100 percentiles for ICO, LCO, Sigma_mol, and Mmol moment maps.
+- **Ico 10kms/30kms Comparison**: If both files are present, reports for each map:
+  - The raw sum (K km/s pixels)
+  - The pixel area (arcsec²)
+  - The integrated intensity (K km/s arcsec², i.e., sum × pixel area)
+  - The peak value
+  - The ratio of integrated intensities and peaks (10kms/30kms)
+  This helps verify consistency between different velocity resolutions and pixel scales.
 
 ## Reporting Output
 - Each QA function returns a dictionary with pass/fail flags, measured values, and error messages.

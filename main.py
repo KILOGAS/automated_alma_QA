@@ -9,6 +9,7 @@ from io_utils import (
     find_snr_map_path,
     load_config,
     load_summary_table,
+    find_ico_10kms_30kms,
 )
 from qa_checks import (
     assert_header_units,
@@ -32,6 +33,7 @@ from qa_checks import (
     measure_rms_cube_ends,
     run_wcs_validation,
     velocity_range_nonblank,
+    compare_ico_10kms_30kms,
 )
 from reporting import compute_qa_summary, log_detailed_report, log_qa_summary
 
@@ -489,6 +491,10 @@ def main():
         result["flag_scaling_consistency"] = scale_consistency_result.get(
             "flag_scaling_consistency", False
         )
+        # --- Ico 10kms/30kms QA check ---
+        ico_10kms_path, ico_30kms_path = find_ico_10kms_30kms(config, object_id)
+        if ico_10kms_path and ico_30kms_path:
+            result.update(compare_ico_10kms_30kms(ico_10kms_path, ico_30kms_path))
         results.append(result)
 
     # --- Summarize and report results ---

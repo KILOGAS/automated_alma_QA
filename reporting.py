@@ -51,7 +51,9 @@ def log_qa_summary(summary: QASummary):
 
 def log_detailed_report(results: List[Dict[str, Any]]):
     for r in results:
-        logging.info(f"\nObject {r['object_id']}:")
+        logging.info("\n==============================")
+        logging.info(f"Object {r['object_id']}:")
+        logging.info("------------------------------")
         # Detection checks (unmasked and masked)
         if r.get('flag_cube_detected', False):
             logging.warning(f"  [FAIL] Unmasked cube detection: max={r.get('cube_max')}, rms={r.get('cube_rms')}, n_voxels_above={r.get('cube_n_voxels_above')} (min required: {r.get('cube_detection_min_voxels', 5)})")
@@ -68,6 +70,21 @@ def log_detailed_report(results: List[Dict[str, Any]]):
         logging.info(f"  Flux ratio (masked/unmasked): {r.get('flux_ratio')}")
         if r.get('flag_flux_diff', False):
             logging.warning(f"  [FAIL] Major difference in total integrated flux between masked and unmasked cubes!")
+        # --- Ico 10kms/30kms QA check ---
+        if r.get('ico_10kms_integrated_intensity') is not None or r.get('ico_30kms_integrated_intensity') is not None:
+            logging.info("\n  Ico 10kms/30kms Comparison:")
+            # logging.info(f"    10kms Ico total sum (K km/s pixels): {r.get('ico_10kms_total_sum')}")
+            # logging.info(f"    30kms Ico total sum (K km/s pixels): {r.get('ico_30kms_total_sum')}")
+            # logging.info(f"    10kms Ico pixel area (arcsec^2): {r.get('ico_10kms_pixarea_arcsec2')}")
+            # logging.info(f"    30kms Ico pixel area (arcsec^2): {r.get('ico_30kms_pixarea_arcsec2')}")
+            logging.info(f"    10kms Ico integrated intensity (K km/s arcsec^2): {r.get('ico_10kms_integrated_intensity')}")
+            logging.info(f"    30kms Ico integrated intensity (K km/s arcsec^2): {r.get('ico_30kms_integrated_intensity')}")
+            logging.info(f"    Integrated intensity ratio (10kms/30kms): {r.get('ico_10kms_30kms_integrated_intensity_ratio')}")
+            logging.info(f"    10kms Ico peak: {r.get('ico_10kms_peak')}")
+            logging.info(f"    30kms Ico peak: {r.get('ico_30kms_peak')}")
+            logging.info(f"    Peak ratio (10kms/30kms): {r.get('ico_10kms_30kms_peak_ratio')}")
+            if r.get('ico_10kms_30kms_error'):
+                logging.warning(f"    [ERROR] Ico 10kms/30kms check: {r.get('ico_10kms_30kms_error')}")
         # LCO > ICO
         if r.get('flag_lco_gt_ico', False):
             logging.warning(f"  [FAIL] LCO > ICO: lco_sum={r.get('lco_sum')}, ico_sum={r.get('ico_sum')}, lco_mean={r.get('lco_mean')}, ico_mean={r.get('ico_mean')}")

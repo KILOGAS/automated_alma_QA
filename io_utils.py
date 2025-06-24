@@ -132,3 +132,20 @@ def find_snr_map_path(config, object_id):
         base_dir, object_id, "moment_maps", f"{object_id}_mom0_SN.fits"
     )
     return snr_map if os.path.exists(snr_map) else None
+
+
+def find_ico_10kms_30kms(config, object_id):
+    """Return paths to Ico 10kms and 30kms maps for a given object, using data_root."""
+    pattern = config["file_patterns"].get("ico", "{object_id}_Ico_K_kms-1.fits")
+    if isinstance(pattern, list):
+        pattern = pattern[0]  # Use the first if multiple
+    data_root = config["data_root"]
+    path_10kms = None
+    path_30kms = None
+    candidate_10 = os.path.join(data_root, object_id, pattern.format(object_id=object_id))
+    if os.path.exists(candidate_10):
+        path_10kms = candidate_10
+    candidate_30 = os.path.join(data_root, object_id, "30kms", pattern.format(object_id=object_id))
+    if os.path.exists(candidate_30):
+        path_30kms = candidate_30
+    return path_10kms, path_30kms

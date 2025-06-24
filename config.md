@@ -19,6 +19,8 @@ logging:
 # Configuration for Generic FITS QA Pipeline
 #
 # data_root: Root directory for data products
+# product_dir_a: Directory for 10kms Ico maps (optional, for Ico 10kms/30kms comparison)
+# product_dir_b: Directory for 30kms Ico maps (optional, for Ico 10kms/30kms comparison)
 # summary_table: Path to summary table (CSV or Excel)
 # file_patterns: Patterns for each data product, use {object_id} as placeholder
 #   unmaskedcube: Full cube, used for detection and total flux

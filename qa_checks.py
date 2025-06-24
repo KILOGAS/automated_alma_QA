@@ -359,6 +359,67 @@ def compare_mmol_to_lco(mmol_path, lco_path):
         }
 
 
+def compare_ico_10kms_30kms(ico_10kms_path, ico_30kms_path):
+    """
+    Compare total detected flux and peak intensity in the 10kms and 30kms Ico maps, and compute their ratio.
+    Also compute integrated intensity in K km/s arcsec^2 by multiplying the sum by the pixel area in arcsec^2.
+    Returns a dict with raw sum, integrated intensity, peak, and ratio for both maps.
+    """
+    result = {}
+    try:
+        with fits.open(ico_10kms_path) as hdul:
+            data_10 = hdul[0].data
+            header_10 = hdul[0].header
+        with fits.open(ico_30kms_path) as hdul:
+            data_30 = hdul[0].data
+            header_30 = hdul[0].header
+        # Pixel area in arcsec^2
+        cdelt1_10 = abs(header_10.get("CDELT1", 0)) * 3600.0  # deg to arcsec
+        cdelt2_10 = abs(header_10.get("CDELT2", 0)) * 3600.0
+        pixarea_10 = cdelt1_10 * cdelt2_10
+        cdelt1_30 = abs(header_30.get("CDELT1", 0)) * 3600.0
+        cdelt2_30 = abs(header_30.get("CDELT2", 0)) * 3600.0
+        pixarea_30 = cdelt1_30 * cdelt2_30
+        total_10 = float(np.nansum(data_10))
+        total_30 = float(np.nansum(data_30))
+        intint_10 = total_10 * pixarea_10
+        intint_30 = total_30 * pixarea_30
+        peak_10 = float(np.nanmax(data_10))
+        peak_30 = float(np.nanmax(data_30))
+        ratio_total = total_10 / total_30 if total_30 not in (None, 0) else None
+        ratio_peak = peak_10 / peak_30 if peak_30 not in (None, 0) else None
+        ratio_intint = intint_10 / intint_30 if intint_30 not in (None, 0) else None
+        result = {
+            # "ico_10kms_total_sum": total_10,
+            # "ico_30kms_total_sum": total_30,
+            # "ico_10kms_pixarea_arcsec2": pixarea_10,
+            # "ico_30kms_pixarea_arcsec2": pixarea_30,
+            "ico_10kms_integrated_intensity": intint_10,
+            "ico_30kms_integrated_intensity": intint_30,
+            "ico_10kms_peak": peak_10,
+            "ico_30kms_peak": peak_30,
+            # "ico_10kms_30kms_sum_ratio": ratio_total,
+            "ico_10kms_30kms_peak_ratio": ratio_peak,
+            "ico_10kms_30kms_integrated_intensity_ratio": ratio_intint,
+        }
+    except Exception as e:
+        result = {
+            "ico_10kms_total_sum": None,
+            "ico_30kms_total_sum": None,
+            "ico_10kms_pixarea_arcsec2": None,
+            "ico_30kms_pixarea_arcsec2": None,
+            "ico_10kms_integrated_intensity": None,
+            "ico_30kms_integrated_intensity": None,
+            "ico_10kms_peak": None,
+            "ico_30kms_peak": None,
+            "ico_10kms_30kms_sum_ratio": None,
+            "ico_10kms_30kms_peak_ratio": None,
+            "ico_10kms_30kms_integrated_intensity_ratio": None,
+            "ico_10kms_30kms_error": str(e),
+        }
+    return result
+
+
 def check_cube_detection(
     cube_path, threshold_sigma=5, min_voxels=5, min_consecutive_channels=3
 ):
