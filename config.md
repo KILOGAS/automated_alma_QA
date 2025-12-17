@@ -1,11 +1,12 @@
 ---
-data_root: ../../../products/v0.1/matched/by_galaxy
-cube_root: ../../../cubes/v1.0/matched
+data_root: ../../../products/v1.1/original/by_galaxy
+data_subdir: 10kms
+cube_root: ../../../cubes/v1.0/original
 summary_table: ../sample/DR1_co2-1_10.0kmps_DP_QA0_simple.csv
 file_patterns:
   unmaskedcube:
-    - "{object_id}_co2-1_10.0kmps_7m+12m.image.pbcor.ifumatched.fits"
-    - "{object_id}_co2-1_10.0kmps_12m.image.pbcor.ifumatched.fits"
+    - "{object_id}_co2-1_10.0kmps_7m+12m.image.pbcor.fits"
+    - "{object_id}_co2-1_10.0kmps_12m.image.pbcor.fits"
   maskedcube: "{object_id}_clipped_cube.fits"
   mask: "{object_id}_mask_cube.fits"
   ico: "{object_id}_Ico_K_kms-1.fits"

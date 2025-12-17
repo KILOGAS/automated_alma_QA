@@ -4,12 +4,13 @@ from datetime import datetime
 
 import numpy as np
 from io_utils import (
+    extract_yaml_from_md,
     find_data_files,
     find_error_map_paths,
+    find_ico_10kms_30kms,
     find_snr_map_path,
     load_config,
     load_summary_table,
-    find_ico_10kms_30kms,
 )
 from qa_checks import (
     assert_header_units,
@@ -21,6 +22,7 @@ from qa_checks import (
     check_map_detection,
     check_mask_nonblank,
     check_scaling_factor_consistency,
+    compare_ico_10kms_30kms,
     compare_mmol_to_lco,
     compare_sigma_mol_to_ico,
     extract_velocity_axis,
@@ -33,7 +35,6 @@ from qa_checks import (
     measure_rms_cube_ends,
     run_wcs_validation,
     velocity_range_nonblank,
-    compare_ico_10kms_30kms,
 )
 from reporting import compute_qa_summary, log_detailed_report, log_qa_summary
 
@@ -526,7 +527,14 @@ def main():
         dt = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_path = os.path.join(log_path, f"qa_report_{dt}.txt")
         os.makedirs(log_path, exist_ok=True)
+
+        yaml_config_text = extract_yaml_from_md("config.md")
+
         with open(out_path, "w") as f:
+            # ---- CONFIG HEADER ----
+            f.write("===== CONFIGURATION (config.md) =====\n")
+            f.write(yaml_config_text + "\n")
+            f.write("===== END CONFIGURATION =====\n\n")
             f.write("QA Summary\n")
             f.write(
                 f"Total objects: {summary.n_total}\nChecked: {summary.n_checked}\nPassed: {summary.n_passed}\nFlagged: {summary.n_flagged}\nSkipped: {summary.n_skipped}\n"

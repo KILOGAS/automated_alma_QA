@@ -1,8 +1,26 @@
 import os
+import re
+import warnings
 
 import pandas as pd
 import yaml
 from astropy.io import fits
+from astropy.wcs import FITSFixedWarning
+
+warnings.simplefilter("ignore", category=FITSFixedWarning)
+
+
+def extract_yaml_from_md(md_path):
+    with open(md_path, "r") as f:
+        text = f.read()
+
+    # Extract fenced YAML block ```yaml ... ```
+    match = re.search(r"```yaml\s+(.*?)```", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    else:
+        # Fallback: assume whole file is YAML
+        return text.strip()
 
 
 def load_config(config_path):
@@ -43,6 +61,7 @@ def find_data_files(config, object_id):
     """
     base_dir = config["data_root"]
     patterns = config["file_patterns"]
+    subdir = config["data_subdir"]
     files = {}
     for key, pattern in patterns.items():
         # Support multiple patterns (list) for a key
@@ -54,14 +73,14 @@ def find_data_files(config, object_id):
                 if key == "unmaskedcube" and "cube_root" in config:
                     candidate = os.path.join(config["cube_root"], object_id, rel_path)
                 else:
-                    candidate = os.path.join(base_dir, object_id, rel_path)
+                    candidate = os.path.join(base_dir, object_id, subdir, rel_path)
                 if os.path.exists(candidate):
                     found = candidate
                     break
             files[key] = found
         else:
             rel_path = pattern.format(object_id=object_id)
-            candidate = os.path.join(base_dir, object_id, rel_path)
+            candidate = os.path.join(base_dir, object_id, subdir, rel_path)
             files[key] = candidate if os.path.exists(candidate) else None
 
     return files
@@ -142,10 +161,15 @@ def find_ico_10kms_30kms(config, object_id):
     data_root = config["data_root"]
     path_10kms = None
     path_30kms = None
-    candidate_10 = os.path.join(data_root, object_id, pattern.format(object_id=object_id))
+    candidate_10 = os.path.join(
+        data_root, object_id, "10kms", pattern.format(object_id=object_id)
+    )
     if os.path.exists(candidate_10):
         path_10kms = candidate_10
-    candidate_30 = os.path.join(data_root, object_id, "30kms", pattern.format(object_id=object_id))
+    candidate_30 = os.path.join(
+        data_root, object_id, "30kms", pattern.format(object_id=object_id)
+    )
     if os.path.exists(candidate_30):
         path_30kms = candidate_30
+
     return path_10kms, path_30kms
