@@ -146,11 +146,16 @@ def check_all_upper_limits(object_id, data_root, cube_root=None):
         ul_path = os.path.join(data_root, object_id, subdir, ul_pattern)
         
         # Try different cube patterns (*image.fits, not pbcor)
+        # Include both regular and ifumatched versions
         cube_patterns = [
             f"{object_id}_co2-1_{velocity_width}.0kmps_7m+12m.image.fits",
             f"{object_id}_co2-1_{velocity_width}.0kmps_12m.image.fits",
             f"{object_id}_co2-1_{velocity_width}kmps_7m+12m.image.fits",
             f"{object_id}_co2-1_{velocity_width}kmps_12m.image.fits",
+            f"{object_id}_co2-1_{velocity_width}.0kmps_7m+12m.image.ifumatched.fits",
+            f"{object_id}_co2-1_{velocity_width}.0kmps_12m.image.ifumatched.fits",
+            f"{object_id}_co2-1_{velocity_width}kmps_7m+12m.image.ifumatched.fits",
+            f"{object_id}_co2-1_{velocity_width}kmps_12m.image.ifumatched.fits",
         ]
         
         cube_path = None
