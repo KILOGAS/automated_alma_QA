@@ -1,12 +1,51 @@
 # ALMA FITS Data Product QA Pipeline
 
 ## Introduction
-This repository provides automated quality assurance (QA) tools for FITS data products. It verifies FITS file integrity, WCS validity, header units, S/N map statistics, and physical consistency of derived maps, ensuring robust, reproducible, and standards-compliant data products for scientific analysis.
+This repository provides automated quality assurance (QA) tools for FITS data products. It includes two focused QA systems:
 
-## User Instructions
+1. **Upper Limit QA** (`main_upper_limit.py`) - **RECOMMENDED**
+   - Focused, tabular reporting for upper limit validation
+   - Compares measured vs expected upper limits
+   - Clean CSV export for analysis
+   - See `README_UPPER_LIMIT_QA.md` for details
+
+2. **Comprehensive QA** (`main.py`) - Legacy system
+   - Full suite of checks: FITS integrity, WCS, units, S/N, physical consistency
+   - Verbose output with all metrics
+   - Use when you need detailed validation beyond upper limits
+
+## Quick Start - Unified QA (Recommended)
+
+Run both comprehensive and upper limit QA in one command:
+
+```bash
+cd automated_alma_QA
+python main_unified.py
+```
+
+This generates three reports:
+- `logs/comprehensive_qa_*.txt` - Detection, data quality, physical consistency
+- `logs/upper_limit_qa_*.txt` - Detailed upper limit validation
+- `logs/upper_limit_qa_*.csv` - CSV export for analysis
+
+### Individual QA Systems
+
+You can also run each system separately:
+
+**Upper Limit QA only:**
+```bash
+python main_upper_limit.py
+```
+
+**Comprehensive QA only:**
+```bash
+python main.py  # (legacy verbose output)
+```
+
+## User Instructions - Comprehensive QA
 1. Edit `config.md` to set your data paths, file patterns, and logging/reporting options.
 2. Place your FITS data products in the appropriate directory structure.
-3. Run the QA scripts on your files.
+3. Run `python main.py` on your files.
 4. Review the output report for any flagged issues or errors.
 
 ## Configuration
