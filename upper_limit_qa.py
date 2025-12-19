@@ -145,9 +145,10 @@ def check_all_upper_limits(object_id, data_root, cube_root=None):
         ul_pattern = f"{object_id}_Ico_K_kms-1_ul.fits"
         ul_path = os.path.join(data_root, object_id, subdir, ul_pattern)
         
-        # Try different cube patterns (*image.fits, not pbcor)
+        # Try different cube patterns - prefer non-pbcor, but support pbcor if needed
         # Include both regular and ifumatched versions
         cube_patterns = [
+            # Non-pbcor versions (preferred)
             f"{object_id}_co2-1_{velocity_width}.0kmps_7m+12m.image.fits",
             f"{object_id}_co2-1_{velocity_width}.0kmps_12m.image.fits",
             f"{object_id}_co2-1_{velocity_width}kmps_7m+12m.image.fits",
@@ -156,6 +157,15 @@ def check_all_upper_limits(object_id, data_root, cube_root=None):
             f"{object_id}_co2-1_{velocity_width}.0kmps_12m.image.ifumatched.fits",
             f"{object_id}_co2-1_{velocity_width}kmps_7m+12m.image.ifumatched.fits",
             f"{object_id}_co2-1_{velocity_width}kmps_12m.image.ifumatched.fits",
+            # Pbcor versions (if non-pbcor not available)
+            f"{object_id}_co2-1_{velocity_width}.0kmps_7m+12m.image.pbcor.fits",
+            f"{object_id}_co2-1_{velocity_width}.0kmps_12m.image.pbcor.fits",
+            f"{object_id}_co2-1_{velocity_width}kmps_7m+12m.image.pbcor.fits",
+            f"{object_id}_co2-1_{velocity_width}kmps_12m.image.pbcor.fits",
+            f"{object_id}_co2-1_{velocity_width}.0kmps_7m+12m.image.pbcor.ifumatched.fits",
+            f"{object_id}_co2-1_{velocity_width}.0kmps_12m.image.pbcor.ifumatched.fits",
+            f"{object_id}_co2-1_{velocity_width}kmps_7m+12m.image.pbcor.ifumatched.fits",
+            f"{object_id}_co2-1_{velocity_width}kmps_12m.image.pbcor.ifumatched.fits",
         ]
         
         cube_path = None
