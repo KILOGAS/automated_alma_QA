@@ -57,8 +57,11 @@ def measure_cube_rms_and_beam(cube_path, velocity_range_kms=300):
     """
     Measure RMS in lowest velocity range and beam parameters from cube.
     
+    RMS is calculated in the central 100x100 pixel region to avoid edge noise
+    in primary beam corrected (pbcor) files.
+    
     Args:
-        cube_path: Path to cube FITS file (*image.fits, not pbcor)
+        cube_path: Path to cube FITS file (*image.fits or *image.pbcor.fits)
         velocity_range_kms: Velocity range to use for RMS calculation (default 300 km/s)
     
     Returns:
@@ -96,8 +99,16 @@ def measure_cube_rms_and_beam(cube_path, velocity_range_kms=300):
             
             lowest_channels = data[:n_channels]
             
-            # Calculate RMS (standard deviation)
-            cube_rms = float(np.nanstd(lowest_channels))
+            # Extract central 100x100 pixel square to avoid edge noise in pbcor files
+            ny, nx = lowest_channels.shape[1], lowest_channels.shape[2]
+            center_y, center_x = ny // 2, nx // 2
+            y_start, y_end = center_y - 50, center_y + 50
+            x_start, x_end = center_x - 50, center_x + 50
+            
+            central_region = lowest_channels[:, y_start:y_end, x_start:x_end]
+            
+            # Calculate RMS (standard deviation) in central region
+            cube_rms = float(np.nanstd(central_region))
             
             # Beam parameters from header
             cube_bmaj = header.get('BMAJ', None)

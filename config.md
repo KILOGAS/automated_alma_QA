@@ -1,7 +1,7 @@
 ---
 data_root: ../../../products/v1.1/original/by_galaxy
 data_subdir: 10kms
-cube_root: ../../../cubes/v1.0/matched
+cube_root: ../../../cubes/v1.0/original
 summary_table: ../sample/DR1_co2-1_10.0kmps_DP_QA0_simple.csv
 file_patterns:
   unmaskedcube:
